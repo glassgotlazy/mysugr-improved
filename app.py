@@ -248,3 +248,83 @@ with diet_tabs[-1]:
         st.bar_chart(avg_ratings)
     except FileNotFoundError:
         st.info("No ratings saved yet. Start rating meals to build your history!")
+
+import streamlit as st
+import pandas as pd
+import random
+from datetime import datetime
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+
+# ----------------------
+# Export Helper: Excel
+# ----------------------
+def export_excel(df, doctor_name):
+    filename = f"diet_history_{doctor_name}_{datetime.now().strftime('%Y%m%d')}.xlsx"
+    df.to_excel(filename, index=False)
+    return filename
+
+# ----------------------
+# Export Helper: PDF
+# ----------------------
+def export_pdf(df, doctor_name):
+    filename = f"diet_history_{doctor_name}_{datetime.now().strftime('%Y%m%d')}.pdf"
+    doc = SimpleDocTemplate(filename, pagesize=A4)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    # Title
+    elements.append(Paragraph(f"Diet History Report - Dr. {doctor_name}", styles["Title"]))
+    elements.append(Spacer(1, 12))
+
+    # Convert dataframe to table
+    table_data = [df.columns.tolist()] + df.values.tolist()
+    table = Table(table_data)
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+    ]))
+    elements.append(table)
+
+    doc.build(elements)
+    return filename
+
+# ----------------------
+# Diet History Tab (updated)
+# ----------------------
+with diet_tabs[-1]:
+    st.markdown("### 📊 Your Meal Rating History")
+
+    doctor_name = st.text_input("👨‍⚕️ Enter your Doctor’s Name")
+
+    try:
+        df = pd.read_csv("diet_history.csv")
+        st.dataframe(df)
+
+        avg_ratings = df.groupby("meal")["rating"].mean().sort_values(ascending=False)
+        st.bar_chart(avg_ratings)
+
+        if doctor_name.strip():
+            st.markdown("### 📂 Export Options")
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("📥 Export to Excel"):
+                    file = export_excel(df, doctor_name.strip().replace(" ", "_"))
+                    st.success(f"✅ Excel file saved as {file}")
+
+            with col2:
+                if st.button("📄 Export to PDF"):
+                    file = export_pdf(df, doctor_name.strip().replace(" ", "_"))
+                    st.success(f"✅ PDF file saved as {file}")
+
+        else:
+            st.info("ℹ️ Please enter your Doctor’s name to enable exports.")
+
+    except FileNotFoundError:
+        st.info("No ratings saved yet. Start rating meals to build your history!")
