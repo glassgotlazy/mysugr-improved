@@ -153,24 +153,29 @@ meals = {
 
 days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
 categories = ["Breakfast", "Lunch", "Dinner", "Snack"]
+# ----------------------------
+# Setup Weekly Meals Rotation
+# ----------------------------
+days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+categories = list(diet_plans.keys())  # Use categories from diet_plans
 
-# Rotate through meals
 if "weekly_meals" not in st.session_state:
     st.session_state.weekly_meals = {}
     for i, day in enumerate(days):
         category = categories[i % len(categories)]
-        st.session_state.weekly_meals[day] = random.choice(meals[category])
+        st.session_state.weekly_meals[day] = random.choice(diet_plans[category])  # ✅ use diet_plans
 
+# ----------------------------
 # 🍽️ Diet Recommendation Tab
+# ----------------------------
 with tabs[2]:
     st.header("🍽️ Personalized Diet Recommendation")
 
     # Pick meal type
-    categories = list(diet_plans.keys())
     selected_category = st.selectbox("Choose a meal type", categories)
 
     if selected_category:
-        meals = diet_plans[selected_category]
+        meals = diet_plans[selected_category]   # ✅ defined here properly
         meal = random.choice(meals)
 
         # Show meal recommendation
@@ -190,8 +195,8 @@ with tabs[2]:
             cols2 = st.columns(4)
             for i, (k, v) in enumerate(meal["nutrition"].items()):
                 key = k.capitalize()
-                if key not in weekly_totals:
-                    weekly_totals[key] = 0
+                if key not in st.session_state:   # ✅ store safely in session_state
+                    st.session_state[key] = 0
 
                 try:
                     val = float(v)
@@ -204,7 +209,7 @@ with tabs[2]:
                 )
 
                 # Add to weekly totals
-                weekly_totals[key] += val
+                st.session_state[key] += val
 
         st.markdown("---")
         st.markdown("### ⭐ Rate this Meal")
