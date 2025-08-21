@@ -153,3 +153,7 @@ if uploaded_file:
             )
 
     except Exception as e:
+        st.error(f"❌ Error processing file: {e}")  # ✅ properly indented
+
+else:
+    st.info("📂 Please upload your CSV file to continue.")
