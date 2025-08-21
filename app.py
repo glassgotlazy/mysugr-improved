@@ -12,7 +12,7 @@ from io import BytesIO
 st.set_page_config(page_title="MySugar Advanced", page_icon="💉", layout="wide")
 
 # -------------------
-# HEADER
+# HEADER WITH EXTRA SPACING
 # -------------------
 st.markdown(
     """
@@ -22,16 +22,22 @@ st.markdown(
             color: #2E86C1;
             text-align: center;
             font-weight: bold;
+            margin-top: 30px;
+            margin-bottom: 15px;
         }
         .subtitle {
             text-align: center;
             color: #117A65;
             font-size: 18px;
+            margin-bottom: 40px;
+        }
+        .block-container {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
         }
     </style>
     <div class="main-title">💉 MySugar Advanced</div>
     <div class="subtitle">Track Blood Sugar • Manage Insulin • Stay Healthy</div>
-    <br>
     """,
     unsafe_allow_html=True
 )
@@ -62,14 +68,12 @@ if uploaded_file:
             st.stop()
 
         if "insulin" not in df.columns:
-            # Try to merge different insulin-related cols
             insulin_cols = [c for c in df.columns if "insulin" in c]
             if insulin_cols:
                 df["insulin"] = df[insulin_cols].sum(axis=1, numeric_only=True)
             else:
                 df["insulin"] = 0
 
-        # Sort values
         df = df.sort_values("datetime")
 
         # -------------------
@@ -82,6 +86,7 @@ if uploaded_file:
         # -------------------
         with tabs[0]:
             st.subheader("📊 Blood Sugar Overview")
+            st.markdown("<br>", unsafe_allow_html=True)  # extra space
 
             st.line_chart(df.set_index("datetime")["blood_sugar_measurement_(mg/dl)"])
 
@@ -93,13 +98,13 @@ if uploaded_file:
         # -------------------
         with tabs[1]:
             st.subheader("💉 Insulin Tracking")
+            st.markdown("<br>", unsafe_allow_html=True)  # extra space
 
             st.line_chart(df.set_index("datetime")["insulin"])
 
             total_insulin = df["insulin"].sum()
             st.metric("Total Insulin Taken", f"{total_insulin:.1f} units")
 
-            # Recommended adjustment
             avg_sugar = df["blood_sugar_measurement_(mg/dl)"].mean()
             if avg_sugar > 180:
                 st.warning("⚠️ High average sugar detected. Consider reviewing insulin dosage with your doctor.")
@@ -113,6 +118,7 @@ if uploaded_file:
         # -------------------
         with tabs[2]:
             st.subheader("🍽 Diet Tracking")
+            st.markdown("<br>", unsafe_allow_html=True)  # extra space
 
             followed_diet = st.checkbox("Did you follow your planned diet?")
             if not followed_diet:
@@ -125,6 +131,7 @@ if uploaded_file:
         # -------------------
         with tabs[3]:
             st.subheader("📄 Generate Health Report")
+            st.markdown("<br>", unsafe_allow_html=True)  # extra space
 
             buffer = BytesIO()
             doc = SimpleDocTemplate(buffer, pagesize=letter)
@@ -146,7 +153,3 @@ if uploaded_file:
             )
 
     except Exception as e:
-        st.error(f"❌ Error processing file: {e}")
-
-else:
-    st.info("📂 Please upload your CSV file to continue.")
