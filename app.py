@@ -110,109 +110,37 @@ with tabs[2]:
         st.error(f"❌ Error in insulin recommendation: {e}")
 
 # -------------------------
-# -------------------------
-# -------------------------
-# Diet Recommendations Tab (Interactive + Randomizer + Nutrition Table)
-# -------------------------
-with tabs[3]:
-    st.header("🍎 Diet Recommendations")
-    st.write("Personalized diet suggestions based on your blood sugar level.")
+# Helper function for nutrition badges
+def show_nutrition_badges(nutrition: dict):
+    badge_styles = {
+        "Calories": "background-color:#FFDD57;color:#000;padding:6px 12px;border-radius:12px;margin:3px;display:inline-block;font-weight:bold;",
+        "Carbs": "background-color:#4DB6FF;color:white;padding:6px 12px;border-radius:12px;margin:3px;display:inline-block;font-weight:bold;",
+        "Protein": "background-color:#57E47B;color:white;padding:6px 12px;border-radius:12px;margin:3px;display:inline-block;font-weight:bold;",
+        "Fat": "background-color:#FF6B6B;color:white;padding:6px 12px;border-radius:12px;margin:3px;display:inline-block;font-weight:bold;",
+    }
 
-    try:
-        bs_level = st.number_input("Enter your current blood sugar (mg/dL)", min_value=50, max_value=500, step=1)
-        meal_time = st.selectbox("Select Meal Time", ["Breakfast", "Lunch", "Dinner", "Snack"])
+    badges = " ".join(
+        [f"<span style='{badge_styles[nutr]}'>{nutr}: {val}</span>" for nutr, val in nutrition.items()]
+    )
+    st.markdown(badges, unsafe_allow_html=True)
 
-        if st.button("🍽 Get Diet Recommendation"):
-            if bs_level < 70:
-                st.warning("⚠️ Your blood sugar is LOW.")
-                st.success("🍯 Fast-acting carbs followed by a balanced snack recommended.")
 
-                meals = [
-                    {"title": "Glucose Tablets", 
-                     "img": "https://www.diabetes.org/sites/default/files/styles/paragraph_large/public/2023-06/Glucose%20Tablet.jpg",
-                     "nutrition": {"Calories": 40, "Carbs": "10g", "Protein": "0g", "Fat": "0g"}},
-                    
-                    {"title": "Fruit Juice", 
-                     "img": "https://hips.hearstapps.com/hmg-prod/images/glass-of-orange-juice-royalty-free-image-1628179032.jpg",
-                     "nutrition": {"Calories": 120, "Carbs": "28g", "Protein": "2g", "Fat": "0g"}},
-                    
-                    {"title": "Balanced Snack (Protein + Carbs)", 
-                     "img": "https://hips.hearstapps.com/hmg-prod/images/protein-snacks-1629407626.jpg",
-                     "nutrition": {"Calories": 180, "Carbs": "20g", "Protein": "10g", "Fat": "6g"}}
-                ]
+# Inside your recommendation display
+if st.button("🎲 Surprise Me with a Meal!"):
+    import random
+    meal = random.choice(meals)
+    st.subheader(f"✨ Random Pick: {meal['title']}")
+    st.image(meal["img"], caption=meal["title"], use_container_width=True)
 
-            elif 70 <= bs_level <= 140:
-                st.success("✅ Normal range.")
-                st.info("🥗 Eat a balanced meal with lean protein, complex carbs, and vegetables.")
+    # ✅ Show nutrition as badges
+    show_nutrition_badges(meal["nutrition"])
 
-                meals = [
-                    {"title": "Balanced Meal Plate", 
-                     "img": "https://www.eatingwell.com/thmb/n0Uu2t91jNVF2nZXuBLDX17jJ_E=/1500x0/...",
-                     "nutrition": {"Calories": 400, "Carbs": "45g", "Protein": "25g", "Fat": "15g"}},
-                    
-                    {"title": "Grilled Salmon with Veggies", 
-                     "img": "https://www.eatingwell.com/thmb/2mKZnXZwCkhAXRjWJm7clv1OylE=/1500x0/...",
-                     "nutrition": {"Calories": 350, "Carbs": "15g", "Protein": "30g", "Fat": "18g"}},
-                    
-                    {"title": "Chicken Salad Bowl", 
-                     "img": "https://www.eatingwell.com/thmb/oFz94KfT3RkLRQqgmGBK1bnlT2I=/1500x0/...",
-                     "nutrition": {"Calories": 320, "Carbs": "20g", "Protein": "28g", "Fat": "12g"}}
-                ]
+# 👉 Carousel Style
+choice = st.radio("👉 Or pick your meal:", [m["title"] for m in meals])
+meal = next(m for m in meals if m["title"] == choice)
+st.image(meal["img"], caption=meal["title"], use_container_width=True)
 
-            elif 140 < bs_level <= 200:
-                st.warning("⚠️ Slightly high sugar.")
-                st.info("🍗 Focus on low-carb meals with protein and fiber.")
+# ✅ Show nutrition as badges
+show_nutrition_badges(meal["nutrition"])
 
-                meals = [
-                    {"title": "Chicken & Veggie Stir-Fry", 
-                     "img": "https://www.eatingwell.com/thmb/ijWcZcUby6rO-TeHCPhrwQjH4EQ=/1500x0/...",
-                     "nutrition": {"Calories": 300, "Carbs": "20g", "Protein": "32g", "Fat": "10g"}},
-                    
-                    {"title": "Grilled Chicken & Broccoli", 
-                     "img": "https://www.eatingwell.com/thmb/XG7T0YuywJH2mghOb0P7cF3n1uM=/1500x0/...",
-                     "nutrition": {"Calories": 280, "Carbs": "15g", "Protein": "30g", "Fat": "8g"}},
-                    
-                    {"title": "Zucchini Noodles with Pesto", 
-                     "img": "https://www.eatingwell.com/thmb/nQce9nZftt3VYTrMT9aB7f65h_c=/1500x0/...",
-                     "nutrition": {"Calories": 260, "Carbs": "12g", "Protein": "15g", "Fat": "16g"}}
-                ]
-
-            else:
-                st.error("🚨 Very high sugar!")
-                st.info("🥦 Stick to very low-carb meals. Avoid sugar completely.")
-
-                meals = [
-                    {"title": "Green Salad & Lean Protein", 
-                     "img": "https://www.eatingwell.com/thmb/o4LJ9Hge6B4xF65Ut9P3XWhM5lc=/1500x0/...",
-                     "nutrition": {"Calories": 220, "Carbs": "10g", "Protein": "22g", "Fat": "9g"}},
-                    
-                    {"title": "Steamed Veggies & Tofu", 
-                     "img": "https://www.eatingwell.com/thmb/VsBoqKJ2vQ7-2moohsTjqOSClCE=/1500x0/...",
-                     "nutrition": {"Calories": 200, "Carbs": "12g", "Protein": "16g", "Fat": "8g"}},
-                    
-                    {"title": "Avocado Salad Bowl", 
-                     "img": "https://www.eatingwell.com/thmb/lX2Q5IQ1VYBaN4U5N7DCVmMYrFQ=/1500x0/...",
-                     "nutrition": {"Calories": 240, "Carbs": "14g", "Protein": "8g", "Fat": "18g"}}
-                ]
-
-            # 🎲 Randomizer Button
-            if st.button("🎲 Surprise Me with a Meal!"):
-                import random
-                meal = random.choice(meals)
-                st.subheader(f"✨ Random Pick: {meal['title']}")
-                st.image(meal["img"], caption=meal["title"], use_container_width=True)
-
-                # ✅ Show nutrition in table
-                st.table(pd.DataFrame(meal["nutrition"], index=[0]))
-
-            # 👉 Carousel Style
-            choice = st.radio("👉 Or pick your meal:", [m["title"] for m in meals])
-            meal = next(m for m in meals if m["title"] == choice)
-            st.image(meal["img"], caption=meal["title"], use_container_width=True)
-
-            # ✅ Show nutrition in table
-            st.table(pd.DataFrame(meal["nutrition"], index=[0]))
-
-    except Exception as e:
-        st.error(f"❌ Error in diet recommendation: {e}")
 
