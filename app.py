@@ -115,123 +115,99 @@ import plotly.express as px
 import random
 
 # ----------------------------
-# Sample Diet Plans
+# ⚙️ Page Config
+# ----------------------------
+st.set_page_config(page_title="MySugr Improved", layout="wide")
+
+# ----------------------------
+# 📊 Sidebar: File Upload
+# ----------------------------
+st.sidebar.title("📂 Upload Data")
+uploaded_file = st.sidebar.file_uploader("Upload your CSV file", type=["csv"])
+
+# ----------------------------
+# 🥗 Diet Plan Data
 # ----------------------------
 diet_plans = {
     "Breakfast": [
-        {"name": "Oats with Fruits", "image": "https://source.unsplash.com/400x300/?oats,fruits",
-         "description": "High fiber breakfast with fresh fruits.",
-         "nutrition": {"calories": 250, "carbs": 45, "protein": 8, "fat": 5}},
-        {"name": "Vegetable Omelette", "image": "https://source.unsplash.com/400x300/?omelette",
-         "description": "Egg omelette with spinach and vegetables.",
-         "nutrition": {"calories": 200, "carbs": 3, "protein": 14, "fat": 12}},
-        {"name": "Smoothie Bowl", "image": "https://source.unsplash.com/400x300/?smoothie",
-         "description": "Mixed fruit smoothie bowl with nuts.",
-         "nutrition": {"calories": 300, "carbs": 50, "protein": 10, "fat": 7}},
+        {"name": "Oats with Fruits", "image": "https://i.imgur.com/8Kh7T4t.jpg",
+         "description": "Fiber-rich oats with fresh fruits for stable sugar.",
+         "nutrition": {"calories": 350, "carbs": 50, "protein": 10, "fat": 5}},
+        {"name": "Vegetable Omelette", "image": "https://i.imgur.com/x5Z4o5Z.jpg",
+         "description": "Egg omelette with spinach, onions, and tomatoes.",
+         "nutrition": {"calories": 280, "carbs": 5, "protein": 18, "fat": 12}},
     ],
     "Lunch": [
-        {"name": "Grilled Chicken Salad", "image": "https://source.unsplash.com/400x300/?chicken,salad",
-         "description": "Lean protein with fresh veggies.",
-         "nutrition": {"calories": 350, "carbs": 12, "protein": 30, "fat": 10}},
-        {"name": "Quinoa Bowl", "image": "https://source.unsplash.com/400x300/?quinoa",
-         "description": "Healthy quinoa with vegetables and beans.",
-         "nutrition": {"calories": 400, "carbs": 60, "protein": 15, "fat": 8}},
+        {"name": "Grilled Chicken Salad", "image": "https://i.imgur.com/n3f4uO3.jpg",
+         "description": "High-protein chicken with green veggies.",
+         "nutrition": {"calories": 400, "carbs": 15, "protein": 35, "fat": 10}},
+        {"name": "Quinoa with Vegetables", "image": "https://i.imgur.com/4RkGZLQ.jpg",
+         "description": "Nutritious quinoa with sauteed vegetables.",
+         "nutrition": {"calories": 420, "carbs": 55, "protein": 15, "fat": 8}},
     ],
     "Dinner": [
-        {"name": "Grilled Salmon", "image": "https://source.unsplash.com/400x300/?salmon",
-         "description": "Omega-3 rich salmon with veggies.",
-         "nutrition": {"calories": 450, "carbs": 10, "protein": 35, "fat": 20}},
-        {"name": "Vegetable Stir Fry", "image": "https://source.unsplash.com/400x300/?vegetable,stirfry",
-         "description": "Mixed veggies stir fried with tofu.",
-         "nutrition": {"calories": 300, "carbs": 40, "protein": 12, "fat": 8}},
-    ],
-    "Snacks": [
-        {"name": "Greek Yogurt with Berries", "image": "https://source.unsplash.com/400x300/?yogurt,berries",
-         "description": "Low-fat yogurt with fresh berries.",
-         "nutrition": {"calories": 180, "carbs": 20, "protein": 12, "fat": 4}},
-        {"name": "Nuts Mix", "image": "https://source.unsplash.com/400x300/?nuts",
-         "description": "Healthy fats and proteins from nuts.",
-         "nutrition": {"calories": 220, "carbs": 8, "protein": 6, "fat": 18}},
+        {"name": "Baked Salmon with Veggies", "image": "https://i.imgur.com/IwlL9Yf.jpg",
+         "description": "Omega-3 rich salmon with steamed vegetables.",
+         "nutrition": {"calories": 500, "carbs": 10, "protein": 40, "fat": 20}},
+        {"name": "Tofu Stir Fry", "image": "https://i.imgur.com/BqZQ0oP.jpg",
+         "description": "Plant protein tofu with colorful bell peppers.",
+         "nutrition": {"calories": 350, "carbs": 20, "protein": 22, "fat": 12}},
     ]
 }
 
-weekly_totals = {"Calories": 0, "Carbs": 0, "Protein": 0, "Fat": 0}
+weekly_totals = {}
 
 # ----------------------------
-# Streamlit UI
+# 🧾 Tabs Layout
 # ----------------------------
-st.set_page_config(page_title="MySugar Dashboard", layout="wide")
-
-st.title("🩸 MySugar Advanced Dashboard")
-
-uploaded_file = st.sidebar.file_uploader("📤 Upload your blood sugar CSV", type=["csv"])
-
-tabs = st.tabs(["📊 Dashboard", "💉 Insulin Recommendation", "🍽️ Diet Recommendation", "📈 Weekly Nutrition"])
+tabs = st.tabs(["📊 Dashboard", "📈 Graphs", "🥗 Diet", "💉 Insulin Recommendation"])
 
 # ----------------------------
-# Dashboard Tab
+# 📊 Dashboard Tab
 # ----------------------------
 with tabs[0]:
-    st.header("📊 Blood Sugar & Insulin Data")
+    st.header("📊 Dashboard Overview")
 
     if uploaded_file:
         try:
             df = pd.read_csv(uploaded_file)
 
-            # Normalize columns
+            # Ensure lowercase column names
             df.columns = [c.strip().lower() for c in df.columns]
 
-            if "date" in df.columns and "time" in df.columns:
-                df["datetime"] = pd.to_datetime(df["date"] + " " + df["time"], errors="coerce")
-            elif "datetime" in df.columns:
-                df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
-            else:
-                st.error("❌ No valid datetime column found.")
-                st.stop()
-
-            df = df.rename(columns={
-                "blood sugar measurement (mg/dl)": "blood_sugar",
-                "insulin injection units (pen)": "insulin"
-            })
-
+            st.success("✅ File uploaded successfully!")
+            st.write("### Preview of Data")
             st.dataframe(df.head())
-
-            # Plot blood sugar
-            fig = px.line(df, x="datetime", y="blood_sugar", title="📈 Blood Sugar Trend", markers=True)
-            st.plotly_chart(fig, use_container_width=True)
-
-            # Plot insulin
-            if "insulin" in df.columns:
-                fig2 = px.bar(df, x="datetime", y="insulin", title="💉 Insulin Taken")
-                st.plotly_chart(fig2, use_container_width=True)
 
         except Exception as e:
             st.error(f"❌ Error processing file: {e}")
     else:
-        st.info("📂 Please upload a CSV file to view your dashboard.")
+        st.info("Please upload a CSV file to view your data.")
 
 # ----------------------------
-# Insulin Recommendation Tab
+# 📈 Graphs Tab
 # ----------------------------
 with tabs[1]:
-    st.header("💉 Insulin Recommendation System")
+    st.header("📈 Blood Sugar & Insulin Graphs")
 
-    sugar_level = st.number_input("Enter your current blood sugar level (mg/dL):", min_value=50, max_value=400, value=120)
-    carbs = st.number_input("Enter carbohydrate intake (grams):", min_value=0, max_value=200, value=50)
+    if uploaded_file:
+        try:
+            if "datetime" in df.columns and "blood sugar measurement (mg/dl)" in df.columns:
+                fig = px.line(df, x="datetime", y="blood sugar measurement (mg/dl)",
+                              title="Blood Sugar Over Time")
+                st.plotly_chart(fig, use_container_width=True)
 
-    if st.button("🔍 Get Insulin Suggestion"):
-        if sugar_level > 180:
-            suggestion = "⚠️ High blood sugar detected. Consider correction dose."
-        elif sugar_level < 70:
-            suggestion = "⚠️ Low blood sugar! Please take glucose immediately."
-        else:
-            suggestion = "✅ Blood sugar normal. Take insulin as per carb intake."
-        
-        st.success(suggestion)
-        st.info(f"💡 Suggested insulin units: {round(carbs / 15, 1)} (based on carb ratio 1:15)")
+            if "datetime" in df.columns and "insulin" in df.columns:
+                fig2 = px.line(df, x="datetime", y="insulin",
+                               title="Insulin Usage Over Time")
+                st.plotly_chart(fig2, use_container_width=True)
+        except Exception as e:
+            st.error(f"❌ Error creating graphs: {e}")
+    else:
+        st.info("Upload a file to generate graphs.")
 
 # ----------------------------
-# Diet Recommendation Tab
+# 🥗 Diet Tab (Improved)
 # ----------------------------
 with tabs[2]:
     st.header("🍽️ Personalized Diet Recommendation")
@@ -259,19 +235,48 @@ with tabs[2]:
                 key = k.capitalize()
                 if key not in weekly_totals:
                     weekly_totals[key] = 0
+
                 try:
                     val = float(v)
                 except Exception:
                     val = 0
-                cols2[i % 4].metric(key, f"{val}{'g' if key != 'Calories' else ''}")
+
+                cols2[i % 4].metric(
+                    key, f"{val}{'g' if key != 'Calories' else ''}"
+                )
                 weekly_totals[key] += val
 
         st.markdown("---")
         st.markdown("### ⭐ Rate this Meal")
-        rating = st.radio("How do you like this meal?", ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"], horizontal=True)
+        rating = st.radio(
+            "How do you like this meal?",
+            ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"],
+            horizontal=True
+        )
 
         st.markdown("### 💬 Feedback")
         feedback = st.text_area("Any comments or suggestions?")
+
+# ----------------------------
+# 💉 Insulin Recommendation Tab
+# ----------------------------
+with tabs[3]:
+    st.header("💉 Insulin Recommendation System")
+
+    current_sugar = st.number_input("Enter current blood sugar level (mg/dL):", min_value=50, max_value=400, value=120)
+    carbs = st.number_input("Enter carbs intake (grams):", min_value=0, max_value=200, value=0)
+    sensitivity = st.slider("Insulin Sensitivity Factor (mg/dL per unit)", 20, 100, 50)
+    carb_ratio = st.slider("Carb Ratio (grams/unit)", 5, 30, 15)
+
+    if st.button("Calculate Recommendation"):
+        correction_dose = max((current_sugar - 120) / sensitivity, 0)
+        carb_dose = carbs / carb_ratio
+        total_dose = round(correction_dose + carb_dose, 1)
+
+        st.success(f"💉 Recommended Insulin Dose: **{total_dose} units**")
+
+        st.info(f"- Correction Dose: {correction_dose:.1f} units")
+        st.info(f"- Carb Coverage Dose: {carb_dose:.1f} units")
 
 # ----------------------------
 # Weekly Nutrition Tracking
