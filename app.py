@@ -1,150 +1,430 @@
+# app.py
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.dates import DateFormatter
 from io import BytesIO
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage
+from datetime import datetime
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import A4
-import datetime
+from reportlab.lib import colors
 
 # =========================
-# Utility Functions
+# Config & Theming
 # =========================
+st.set_page_config(page_title="MySugr Dashboard", page_icon="💉", layout="wide")
+st.markdown("""
+<style>
+/* Soft modern look */
+:root { --card-bg: #f7fbff; --accent: #1976d2; }
+.block-container { padding-top: 1.2rem; }
+h1, h2, h3 { color: var(--accent); }
+.metric-card{
+  background: linear-gradient(135deg, #eef7ff, #fafdff);
+  border: 1px solid #e5eef8; border-radius: 18px; padding: 18px;
+  box-shadow: 0 4px 14px rgba(10,30,60,0.06);
+}
+.diet-card{
+  background: linear-gradient(135deg, #fff0f4, #fff7fb);
+  border: 1px solid #fde1eb; border-radius: 18px; padding: 24px;
+  box-shadow: 0 8px 18px rgba(200,0,80,0.08);
+}
+.big-number{ font-size: 26px; font-weight: 700; }
+.subtle{ color:#4b5b6a; }
+</style>
+""", unsafe_allow_html=True)
 
-def load_data(file):
-    df = pd.read_csv(file)
-    # Normalize column names
-    df.columns = [c.strip().lower() for c in df.columns]
+# =========================
+# Helpers
+# =========================
+def robust_detect_columns(df: pd.DataFrame):
+    """
+    Detect datetime and glucose columns with flexible rules.
+    Supports:
+      - Single timestamp column (e.g., DateTime, Timestamp)
+      - Separate Date + Time columns
+      - Glucose columns like: Blood Sugar Measurement (mg/dL), Blood Glucose (mg/dL), Glucose, etc.
+    Returns: (dt_col, glucose_col, info_dict)
+    If Date+Time separate, creates a new __datetime column.
+    """
+    original_cols = df.columns.tolist()
+    lower_map = {c.lower().strip(): c for c in df.columns}
+    lowers = list(lower_map.keys())
 
-    if "datetime" not in df.columns or "blood sugar measurement (mg/dl)" not in df.columns:
-        st.error("❌ CSV must contain 'DateTime' and 'Blood Sugar Measurement (mg/dL)' columns.")
-        return None
+    # Candidate keys
+    dt_single_candidates = ["datetime", "timestamp", "date time", "time stamp"]
+    date_candidates = ["date"]
+    time_candidates = ["time"]
 
-    df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
-    df = df.dropna(subset=["datetime"])
-    df = df.sort_values("datetime")
-    df.rename(columns={"blood sugar measurement (mg/dl)": "glucose"}, inplace=True)
-    return df
+    glucose_exact = [
+        "blood sugar measurement (mg/dl)", "blood sugar measurement (mg/dl)", "blood glucose (mg/dl)",
+        "blood glucose", "glucose (mg/dl)", "glucose value", "glucose", "bg", "measurement"
+    ]
+
+    # Detect glucose col
+    glucose_col = None
+    for key in glucose_exact:
+        if key in lower_map:
+            glucose_col = lower_map[key]
+            break
+    if glucose_col is None:
+        # broad contains search but avoid insulin columns
+        for low, orig in lower_map.items():
+            if any(k in low for k in ["glucose", "sugar", "measurement"]) and "insulin" not in low:
+                glucose_col = orig
+                break
+
+    # Detect datetime (single)
+    dt_col = None
+    for key in dt_single_candidates:
+        if key in lower_map:
+            dt_col = lower_map[key]
+            break
+
+    # If not single, try separate date & time
+    created_dt = False
+    used_date = None
+    used_time = None
+    if dt_col is None:
+        # find date
+        for key in date_candidates:
+            for low, orig in lower_map.items():
+                if low == key or (key in low and "updated" not in low and "timezone" not in low):
+                    used_date = orig
+                    break
+            if used_date: break
+        # find time
+        for key in time_candidates:
+            for low, orig in lower_map.items():
+                if low == key or (key in low and "zone" not in low):
+                    used_time = orig
+                    break
+            if used_time: break
+
+        if used_date is not None and used_time is not None:
+            df["__datetime"] = pd.to_datetime(df[used_date].astype(str) + " " + df[used_time].astype(str), errors="coerce")
+            dt_col = "__datetime"
+            created_dt = True
+
+    info = {
+        "original_columns": original_cols,
+        "detected_datetime": dt_col,
+        "detected_glucose": glucose_col,
+        "used_date": used_date,
+        "used_time": used_time,
+        "created_datetime": created_dt
+    }
+    return dt_col, glucose_col, info
 
 
-def insulin_needed(current_glucose, target_glucose=150, isf=14.13):
-    if current_glucose <= target_glucose:
+def insulin_needed(current_glucose, target_glucose=150.0, isf=14.13):
+    if pd.isna(current_glucose) or current_glucose <= target_glucose:
         return 0.0
-    return (current_glucose - target_glucose) / isf
+    return max(0.0, (float(current_glucose) - float(target_glucose)) / float(isf))
 
 
 def diet_suggestions(glucose):
     if glucose < 70:
         return {
-            "Breakfast": "Oats with honey, banana smoothie, or a slice of bread with peanut butter.",
-            "Lunch": "Rice with dal, small sweet potato, and a fruit juice.",
-            "Dinner": "Vegetable soup with bread, or roti with paneer curry.",
-            "Snacks": "Glucose biscuits, fruit yogurt, or dry fruits."
+            "Status": "⚠️ Low glucose",
+            "Breakfast": "Banana or juice now; then toast with peanut butter.",
+            "Lunch": "Balanced carbs + protein (dal & rice) and recheck.",
+            "Dinner": "Veg soup with bread; avoid excess insulin before bed.",
+            "Snacks": "Glucose tabs/juice; then nuts/yogurt."
         }
-    elif 70 <= glucose <= 180:
+    elif glucose <= 180:
         return {
-            "Breakfast": "Multigrain toast, boiled egg or poha.",
-            "Lunch": "Brown rice with chicken/fish or dal & sabzi.",
-            "Dinner": "2 rotis with dal & vegetables, salad.",
-            "Snacks": "Nuts, apple/pear, or sprouts."
+            "Status": "✅ In range",
+            "Breakfast": "Poha/multigrain toast + omelette or sprouts.",
+            "Lunch": "Brown rice + dal & sabzi or grilled chicken/fish.",
+            "Dinner": "2 rotis + dal & veggies; salad & buttermilk.",
+            "Snacks": "Apple/pear, roasted chana, sprouts, nuts."
         }
     else:
         return {
-            "Breakfast": "Egg whites, avocado toast, or vegetable upma.",
-            "Lunch": "Grilled chicken/fish with salad, or dal with green veggies.",
-            "Dinner": "2 rotis with sabzi, green salad, buttermilk.",
-            "Snacks": "Cucumber, carrot sticks, roasted chickpeas."
+            "Status": "⚠️ High glucose",
+            "Breakfast": "Egg whites, avocado toast or veggie upma (low GI).",
+            "Lunch": "Grilled paneer/chicken + big salad; avoid white rice.",
+            "Dinner": "2 small rotis + non-starchy veg; walk 10–20 min.",
+            "Snacks": "Cucumber/carrot sticks, roasted chana; avoid sweets."
         }
 
 
-def generate_report(df, avg_glucose, latest_glucose, tir, hba1c, diet):
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4)
+def time_in_range(series, low=70, high=180):
+    s = pd.to_numeric(series, errors="coerce")
+    s = s.dropna()
+    if s.empty:
+        return 0.0
+    return 100.0 * np.mean((s >= low) & (s <= high))
+
+
+def est_hba1c(avg_glucose):
+    # ADA eAG to HbA1c conversion
+    return (avg_glucose + 46.7) / 28.7
+
+
+def build_trend_figure(df, dt_col, g_col):
+    fig, ax = plt.subplots(figsize=(10, 4.8))
+    x = pd.to_datetime(df[dt_col])
+    y = pd.to_numeric(df[g_col], errors="coerce")
+
+    # Danger zones
+    ymax = float(np.nanmax(y)) if np.isfinite(np.nanmax(y)) else 300.0
+    ax.axhspan(0, 70, alpha=0.18, color="orange", label="Low < 70")
+    ax.axhspan(250, max(260, ymax + 40), alpha=0.14, color="red", label="High > 250")
+
+    ax.plot(x, y, marker="o", linewidth=1.9)
+    ax.axhline(150, linestyle="--", label="Target 150")
+
+    ax.set_title("Glucose Trend Over Time")
+    ax.set_ylabel("mg/dL")
+    ax.grid(True, alpha=0.25)
+    ax.legend(loc="upper left")
+    ax.xaxis.set_major_formatter(DateFormatter("%Y-%m-%d\n%H:%M"))
+    fig.autofmt_xdate()
+    return fig
+
+
+def build_daily_avg_bar_figure(daily_df):
+    fig, ax = plt.subplots(figsize=(10, 3.8))
+    x = pd.to_datetime(daily_df["Date"])
+    y = daily_df["Average"]
+    ax.bar(x, y)
+    ax.set_title("Daily Average Glucose")
+    ax.set_ylabel("mg/dL")
+    ax.grid(True, axis="y", alpha=0.25)
+    ax.xaxis.set_major_formatter(DateFormatter("%b %d"))
+    fig.autofmt_xdate()
+    return fig
+
+
+def fig_png(fig, dpi=170):
+    buf = BytesIO()
+    fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight")
+    plt.close(fig)
+    buf.seek(0)
+    return buf.getvalue()
+
+
+def pdf_report(avg_glucose, latest_glucose, tir, hba1c, selected_dt, current_glucose,
+               correction_units, daily_avg_df, trend_png, bar_png, diet_text):
+    buf = BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4)
     styles = getSampleStyleSheet()
-    elements = []
+    elems = []
 
-    elements.append(Paragraph("📄 MySugr Report", styles["Title"]))
-    elements.append(Spacer(1, 20))
+    elems.append(Paragraph("📄 MySugr Report", styles["Title"]))
+    elems.append(Paragraph(datetime.now().strftime("%Y-%m-%d %H:%M"), styles["Normal"]))
+    elems.append(Spacer(1, 10))
 
-    elements.append(Paragraph(f"📊 Average Glucose: {avg_glucose:.2f} mg/dL", styles["Normal"]))
-    elements.append(Paragraph(f"🩸 Latest Glucose: {latest_glucose:.2f} mg/dL", styles["Normal"]))
-    elements.append(Paragraph(f"📈 Time in Range: {tir:.1f}%", styles["Normal"]))
-    elements.append(Paragraph(f"🧬 Estimated HbA1c: {hba1c:.2f}%", styles["Normal"]))
-    elements.append(Spacer(1, 20))
+    elems.append(Paragraph(f"<b>Average Glucose:</b> {avg_glucose:.2f} mg/dL", styles["Normal"]))
+    elems.append(Paragraph(f"<b>Latest Glucose:</b> {latest_glucose:.0f} mg/dL", styles["Normal"]))
+    elems.append(Paragraph(f"<b>Time in Range (70–180):</b> {tir:.1f}%", styles["Normal"]))
+    elems.append(Paragraph(f"<b>Estimated HbA1c:</b> {hba1c:.2f}%", styles["Normal"]))
+    elems.append(Spacer(1, 10))
 
-    elements.append(Paragraph("🍽️ Diet Suggestions:", styles["Heading2"]))
-    for meal, suggestion in diet.items():
-        elements.append(Paragraph(f"<b>{meal}:</b> {suggestion}", styles["Normal"]))
+    if selected_dt:
+        elems.append(Paragraph("💉 Insulin Correction", styles["Heading2"]))
+        elems.append(Paragraph(
+            f"Date/Time: {selected_dt}<br/>"
+            f"Current: {current_glucose:.0f} mg/dL<br/>"
+            f"Target: 150 mg/dL<br/>"
+            f"Suggested: {correction_units:.1f} units",
+            styles["Normal"]
+        ))
+        elems.append(Spacer(1, 8))
 
-    doc.build(elements)
-    buffer.seek(0)
-    return buffer
+    elems.append(Paragraph("🍽️ Diet Suggestions", styles["Heading2"]))
+    elems.append(Paragraph(diet_text, styles["Normal"]))
+    elems.append(Spacer(1, 8))
 
+    if trend_png:
+        elems.append(Paragraph("📈 Glucose Trend", styles["Heading2"]))
+        elems.append(RLImage(BytesIO(trend_png), width=480, height=230))
+        elems.append(Spacer(1, 8))
+    if bar_png:
+        elems.append(Paragraph("📊 Daily Averages", styles["Heading2"]))
+        elems.append(RLImage(BytesIO(bar_png), width=480, height=210))
+        elems.append(Spacer(1, 8))
+
+    if not daily_avg_df.empty:
+        table_data = [["Date", "Average (mg/dL)"]] + [
+            [str(r["Date"]), f"{r['Average']:.1f}"] for _, r in daily_avg_df.iterrows()
+        ]
+        t = Table(table_data, hAlign="LEFT")
+        t.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ]))
+        elems.append(t)
+
+    doc.build(elems)
+    pdf = buf.getvalue()
+    buf.close()
+    return pdf
 
 # =========================
-# Streamlit App Layout
+# Sidebar Upload
 # =========================
+st.sidebar.header("⚙️ Settings")
+uploaded = st.sidebar.file_uploader("📂 Upload mySugr CSV", type=["csv"])
+st.sidebar.caption("Tip: You can export CSV from mySugr. This app auto-detects headers.")
 
-st.set_page_config(page_title="MySugr Dashboard", layout="wide")
-st.title("💉 MySugr Diabetes Dashboard")
-st.markdown("Upload your glucose data and get insights, diet plans, and insulin suggestions.")
+if not uploaded:
+    st.info("Upload your CSV to get started.")
+    st.stop()
 
-uploaded_file = st.sidebar.file_uploader("📂 Upload your MySugr CSV file", type=["csv"])
+# =========================
+# Load & Detect Columns
+# =========================
+try:
+    df = pd.read_csv(uploaded)
+except Exception as e:
+    st.error(f"Couldn't read CSV: {e}")
+    st.stop()
 
-if uploaded_file:
-    df = load_data(uploaded_file)
+dt_col, g_col, info = robust_detect_columns(df)
 
-    if df is not None:
-        # Calculate metrics
-        avg_glucose = df["glucose"].mean()
-        latest_glucose = df["glucose"].iloc[-1]
-        tir = (df[(df["glucose"] >= 70) & (df["glucose"] <= 180)].shape[0] / df.shape[0]) * 100
-        hba1c = (avg_glucose + 46.7) / 28.7  # ADA formula
+if g_col is None or dt_col is None:
+    st.error("❌ Could not detect the timestamp and glucose columns automatically.")
+    with st.expander("What I saw in your file"):
+        st.write("Columns:", info["original_columns"])
+        st.write("Detected datetime:", info["detected_datetime"])
+        st.write("Detected glucose:", info["detected_glucose"])
+        st.write("Separate Date/Time used:", info["used_date"], info["used_time"])
+    st.stop()
 
-        tabs = st.tabs(["📊 Analytics", "🍽️ Diet", "💉 Insulin", "📄 Report"])
+# Parse datetime & glucose
+df[dt_col] = pd.to_datetime(df[dt_col], errors="coerce")
+df[g_col] = pd.to_numeric(df[g_col], errors="coerce")
+df = df.dropna(subset=[dt_col, g_col]).sort_values(dt_col)
+if df.empty:
+    st.error("No valid rows after parsing Date/Time and Glucose.")
+    st.stop()
 
-        # ================= ANALYTICS =================
-        with tabs[0]:
-            st.subheader("📊 Glucose Analytics")
-            col1, col2, col3 = st.columns(3)
-            col1.metric("Average Glucose", f"{avg_glucose:.2f} mg/dL")
-            col2.metric("Latest Glucose", f"{latest_glucose:.2f} mg/dL")
-            col3.metric("Time in Range", f"{tir:.1f}%")
+# Show detection summary
+with st.expander("🔎 Detected Columns (auto)"):
+    st.write(f"**Timestamp column:** `{dt_col}`" + (f" (built from `{info['used_date']}` + `{info['used_time']}`)" if info["created_datetime"] else ""))
+    st.write(f"**Glucose column:** `{g_col}`")
 
-            st.line_chart(df.set_index("datetime")["glucose"], height=400)
+# =========================
+# Metrics
+# =========================
+avg_glucose = float(df[g_col].mean())
+latest_glucose = float(df.iloc[-1][g_col])
+tir = time_in_range(df[g_col], 70, 180)
+hba1c = est_hba1c(avg_glucose)
 
-            fig, ax = plt.subplots()
-            ax.hist(df["glucose"], bins=20, color="skyblue", edgecolor="black")
-            ax.axvline(avg_glucose, color="red", linestyle="--", label=f"Mean {avg_glucose:.1f}")
-            ax.set_title("Glucose Distribution")
-            ax.set_xlabel("Glucose (mg/dL)")
-            ax.set_ylabel("Frequency")
-            ax.legend()
-            st.pyplot(fig)
+mc1, mc2, mc3 = st.columns(3)
+with mc1:
+    st.markdown(f'<div class="metric-card"><div class="subtle">Average Glucose</div><div class="big-number">{avg_glucose:.1f} mg/dL</div></div>', unsafe_allow_html=True)
+with mc2:
+    st.markdown(f'<div class="metric-card"><div class="subtle">Latest Glucose</div><div class="big-number">{latest_glucose:.0f} mg/dL</div></div>', unsafe_allow_html=True)
+with mc3:
+    st.markdown(f'<div class="metric-card"><div class="subtle">Time in Range (70–180)</div><div class="big-number">{tir:.1f}%</div></div>', unsafe_allow_html=True)
 
-        # ================= DIET =================
-        with tabs[1]:
-            st.subheader("🍽️ Personalized Diet Suggestions")
-            suggestions = diet_suggestions(latest_glucose)
+# =========================
+# Tabs
+# =========================
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Analytics", "🍽️ Diet", "💉 Insulin", "📄 Report"])
 
-            for meal, suggestion in suggestions.items():
-                st.markdown(f"### {meal}")
-                st.markdown(f"✅ {suggestion}")
+# -------- Analytics --------
+with tab1:
+    st.subheader("Trend & Distribution")
 
-        # ================= INSULIN =================
-        with tabs[2]:
-            st.subheader("💉 Insulin Calculator")
+    # Trend chart
+    trend_fig = build_trend_figure(df, dt_col, g_col)
+    st.pyplot(trend_fig)
 
-            target = st.number_input("🎯 Target Glucose", 80, 180, 150)
-            isf = st.number_input("⚖️ Insulin Sensitivity Factor (mg/dL per unit)", 5.0, 50.0, 14.13)
-            glucose_input = st.number_input("🩸 Current Glucose", 50, 600, int(latest_glucose))
+    # Daily averages
+    st.markdown("### Daily Averages")
+    ddf = df.copy()
+    ddf["__Date"] = pd.to_datetime(ddf[dt_col]).dt.date
+    daily_avg = ddf.groupby("__Date")[g_col].mean().rename("Average").reset_index().rename(columns={"__Date": "Date"})
+    bar_fig = build_daily_avg_bar_figure(daily_avg)
+    st.pyplot(bar_fig)
 
-            correction_dose = insulin_needed(glucose_input, target, isf)
-            st.metric("Correction Dose", f"{correction_dose:.2f} units")
+    # Histogram
+    st.markdown("### Glucose Distribution")
+    fig, ax = plt.subplots(figsize=(10, 3.6))
+    ax.hist(pd.to_numeric(df[g_col], errors="coerce"), bins=24)
+    ax.axvline(avg_glucose, linestyle="--", label=f"Mean {avg_glucose:.1f}")
+    ax.set_xlabel("mg/dL"); ax.set_ylabel("Count"); ax.legend()
+    st.pyplot(fig)
 
-        # ================= REPORT =================
-        with tabs[3]:
-            st.subheader("📄 Download Report")
-            report = generate_report(df, avg_glucose, latest_glucose, tir, hba1c, suggestions)
-            st.download_button("⬇️ Download PDF", report, "mysugr_report.pdf", "application/pdf")
+# -------- Diet --------
+with tab2:
+    st.subheader("Personalized Diet Suggestions")
+    d = diet_suggestions(latest_glucose)
+    status = d.pop("Status", "Diet")
+    st.markdown(f'<div class="diet-card"><div class="big-number">{status}</div>'
+                f'<div class="subtle">Tailored for your most recent reading</div></div>', unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("**Breakfast**")
+        st.write(d["Breakfast"])
+        st.markdown("**Lunch**")
+        st.write(d["Lunch"])
+    with c2:
+        st.markdown("**Dinner**")
+        st.write(d["Dinner"])
+        st.markdown("**Snacks**")
+        st.write(d["Snacks"])
+
+# -------- Insulin --------
+with tab3:
+    st.subheader("Insulin Correction Advisor")
+
+    # Safe human-readable select
+    view = df[[dt_col, g_col]].copy()
+    view["Label"] = view.apply(lambda r: f"{pd.to_datetime(r[dt_col]).strftime('%Y-%m-%d %H:%M')} → {int(round(r[g_col]))} mg/dL", axis=1)
+    chosen = st.selectbox("Select a reading", options=view["Label"].tolist())
+    row = view[view["Label"] == chosen].iloc[0]
+    selected_dt = pd.to_datetime(row[dt_col])
+    selected_dt_str = selected_dt.strftime("%Y-%m-%d %H:%M")
+    current_glucose = float(row[g_col])
+
+    colA, colB = st.columns(2)
+    with colA:
+        target_glucose = st.number_input("🎯 Target (mg/dL)", value=150, min_value=70, max_value=200, step=5)
+    with colB:
+        isf = st.number_input("⚖️ ISF (mg/dL per unit)", value=14.13, min_value=5.0, max_value=80.0, step=0.01, format="%.2f")
+
+    correction_units = insulin_needed(current_glucose, target_glucose, isf)
+    st.success(f"**{selected_dt_str}**  \nCurrent: **{current_glucose:.0f} mg/dL** → Suggested correction: **{correction_units:.1f} units**")
+
+# -------- Report --------
+with tab4:
+    st.subheader("Download PDF Report")
+    # Build images for PDF
+    trend_png = fig_png(build_trend_figure(df, dt_col, g_col))
+    bar_png = fig_png(build_daily_avg_bar_figure(daily_avg))
+    # Diet text
+    diet_block = diet_suggestions(latest_glucose)
+    diet_text = "; ".join([f"{k}: {v}" for k, v in diet_block.items() if k != "Status"])
+
+    pdf_bytes = pdf_report(
+        avg_glucose=avg_glucose,
+        latest_glucose=latest_glucose,
+        tir=tir,
+        hba1c=hba1c,
+        selected_dt=selected_dt_str if 'selected_dt_str' in locals() else None,
+        current_glucose=current_glucose if 'current_glucose' in locals() else np.nan,
+        correction_units=correction_units if 'correction_units' in locals() else 0.0,
+        daily_avg_df=daily_avg,
+        trend_png=trend_png,
+        bar_png=bar_png,
+        diet_text=diet_text
+    )
+
+    st.download_button(
+        "📥 Download Weekly Report (PDF)",
+        data=pdf_bytes,
+        file_name="mysugr_weekly_report.pdf",
+        mime="application/pdf"
+    )
