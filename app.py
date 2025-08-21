@@ -203,8 +203,12 @@ for i, (k, v) in enumerate(meal["nutrition"].items()):
 
     try:
         val = float(v)  # Convert to number
-    except:
+    except Exception:
         val = 0
+
+    cols[i].metric(key, f"{val}{'g' if key != 'Calories' else ''}")
+    weekly_totals[key] += val
+
 
     cols[i].metric(key, f"{val}{'g' if key != 'Calories' else ''}")
     weekly_totals[key] += val
