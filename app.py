@@ -14,18 +14,29 @@ import datetime
 
 def load_data(file):
     df = pd.read_csv(file)
-    # Normalize column names
     df.columns = [c.strip().lower() for c in df.columns]
 
-    if "datetime" not in df.columns or "blood sugar measurement (mg/dl)" not in df.columns:
-        st.error("❌ CSV must contain 'DateTime' and 'Blood Sugar Measurement (mg/dL)' columns.")
+    # Try flexible matching
+    datetime_col = None
+    glucose_col = None
+
+    for col in df.columns:
+        if "date" in col and "time" in col or "datetime" in col:
+            datetime_col = col
+        if "glucose" in col or "blood" in col:
+            glucose_col = col
+
+    if not datetime_col or not glucose_col:
+        st.error("❌ Could not detect DateTime and Glucose columns. Please check your CSV.")
+        st.write("✅ Detected columns:", df.columns.tolist())
         return None
 
-    df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
+    df["datetime"] = pd.to_datetime(df[datetime_col], errors="coerce")
     df = df.dropna(subset=["datetime"])
     df = df.sort_values("datetime")
-    df.rename(columns={"blood sugar measurement (mg/dl)": "glucose"}, inplace=True)
+    df.rename(columns={glucose_col: "glucose"}, inplace=True)
     return df
+
 
 
 def insulin_needed(current_glucose, target_glucose=150, isf=14.13):
