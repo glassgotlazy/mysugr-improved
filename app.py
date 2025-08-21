@@ -87,15 +87,7 @@ def process_file(file):
             avg = df["blood_sugar_measurement_(mg/dl)"].mean()
             st.metric("Average Blood Sugar", f"{avg:.1f} mg/dL")
 
-        # Insulin
-        with tabs[1]:
-            st.subheader("💉 Insulin Tracking")
-            st.line_chart(df.set_index("datetime")["insulin"])
-            total_insulin = df["insulin"].sum()
-            st.metric("Total Insulin Taken", f"{total_insulin:.1f} units")
-
-            # -------------------
-                  # =====================
+        # =====================
         # INSULIN TAB
         # =====================
         with tabs[1]:
@@ -151,6 +143,8 @@ def process_file(file):
                 "Total Insulin (units)": daily_insulin.values
             })
             st.dataframe(insulin_summary, use_container_width=True)
+
+         
 
 
 
