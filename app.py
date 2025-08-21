@@ -32,7 +32,7 @@ h1, h2, h3 { color: var(--accent); }
   box-shadow: 0 8px 18px rgba(200,0,80,0.08);
 }
 .big-number{ font-size: 26px; font-weight: 700; }
-.subtle{ color:#4b5b6a; }
+.subtle{ color:#000000; }
 </style>
 """, unsafe_allow_html=True)
 
