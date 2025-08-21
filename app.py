@@ -181,8 +181,6 @@ if "weekly_meals" not in st.session_state:
         category = categories[i % len(categories)]
         st.session_state.weekly_meals[day] = random.choice(meals[category])
 
-# UI
-st.title("🍽️ Auto-Balanced Weekly Diet Plan")
 # 🍽️ Diet Recommendation Tab
 with tabs[2]:
     st.header("🍽️ Personalized Diet Recommendation")
@@ -194,45 +192,54 @@ with tabs[2]:
 
         if selected_category:
             meals = diet_plans[selected_category]
-            meal = random.choice(meals)
 
-            # Show meal recommendation
-            st.subheader(f"Recommended {selected_category}: {meal.get('name', 'Unknown Meal')}")
+            try:
+                meal = random.choice(meals)
+            except Exception as e:
+                st.error(f"⚠️ Could not select a meal: {e}")
+                meal = None
 
-            cols = st.columns(2)
+            if meal:
+                # Show meal recommendation
+                st.subheader(f"Recommended {selected_category}: {meal.get('name', 'Unknown')}")
 
-            # Meal image (safe load)
-            with cols[0]:
-                try:
-                    if "image" in meal and meal["image"]:
-                        st.image(meal["image"], use_container_width=True)
-                    else:
-                        st.warning("📷 No image available for this meal.")
-                except Exception:
-                    st.warning("⚠️ Could not load image.")
+                cols = st.columns(2)
 
-            # Meal details + nutrition
-            with cols[1]:
-                st.write(meal.get("description", "No description available."))
-                st.markdown("**Nutritional Info:**")
-
-                cols2 = st.columns(4)
-                for i, (k, v) in enumerate(meal.get("nutrition", {}).items()):
-                    key = k.capitalize()
-                    if key not in weekly_totals:
-                        weekly_totals[key] = 0
-
+                # Meal image
+                with cols[0]:
                     try:
-                        val = float(v)
-                    except Exception:
-                        val = 0
+                        if "image" in meal and meal["image"]:
+                            st.image(meal["image"], use_container_width=True)
+                        else:
+                            st.warning("⚠️ No image available for this meal.")
+                    except Exception as e:
+                        st.error(f"⚠️ Error loading image: {e}")
 
-                    # Show nutrition metric
-                    unit = "g" if key != "Calories" else ""
-                    cols2[i % 4].metric(key, f"{val}{unit}")
+                # Meal details + nutrition
+                with cols[1]:
+                    st.write(meal.get("description", "No description available"))
+                    st.markdown("**Nutritional Info:**")
 
-                    # Add to weekly totals
-                    weekly_totals[key] += val
+                    cols2 = st.columns(4)
+
+                    if "nutrition" in meal:
+                        for i, (k, v) in enumerate(meal["nutrition"].items()):
+                            key = k.capitalize()
+                            if key not in weekly_totals:
+                                weekly_totals[key] = 0
+
+                            try:
+                                val = float(v)
+                            except Exception:
+                                val = 0
+
+                            cols2[i % 4].metric(
+                                key, f"{val}{'g' if key.lower() != 'calories' else ''}"
+                            )
+
+                            weekly_totals[key] += val
+                    else:
+                        st.warning("⚠️ No nutrition data available.")
 
         st.markdown("---")
         st.markdown("### ⭐ Rate this Meal")
@@ -246,7 +253,7 @@ with tabs[2]:
         feedback = st.text_area("Any comments or suggestions?")
 
     except Exception as e:
-        st.error(f"⚠️ Diet Recommendation failed: {e}")
+        st.error(f"⚠️ Error in Diet Recommendation tab: {e}")
 
 
 # 📊 Weekly Summary
