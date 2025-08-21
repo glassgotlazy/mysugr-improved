@@ -6,7 +6,16 @@ import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
 from io import BytesIO
 from datetime import datetime
+import streamlit as st
 
+hide_streamlit_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    </style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True
 # Try to import reportlab (optional). If not found, we’ll disable PDF.
 try:
     from reportlab.platypus import (
