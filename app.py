@@ -88,64 +88,73 @@ def process_file(file):
             st.metric("Average Blood Sugar", f"{avg:.1f} mg/dL")
 
         # =====================
+               # -------------------
         # INSULIN TAB
-        # =====================
+        # -------------------
         with tabs[1]:
-            st.subheader("💉 Insulin Insights")
+            st.subheader("💉 Insulin Tracking")
 
-            # Plot insulin usage
-            st.markdown("#### 📊 Insulin Over Time")
-            st.line_chart(df.set_index("datetime")["insulin"])
+            # Line chart of insulin usage
+            st.line_chart(df.set_index("datetime")["insulin"], height=300)
 
-            # Daily average insulin
-            daily_insulin = df.groupby(df["datetime"].dt.date)["insulin"].sum()
-            st.bar_chart(daily_insulin)
+            total_insulin = df["insulin"].sum()
+            st.metric("Total Insulin Taken", f"{total_insulin:.1f} units")
 
-            # Latest reading
+            st.markdown("### 🧠 Smart Insulin Recommendations")
+
             latest_value = df["blood_sugar_measurement_(mg/dl)"].iloc[-1]
-            st.markdown(f"### 📌 Latest Blood Sugar: **{latest_value} mg/dL**")
+            st.write(f"📌 Latest Blood Sugar: **{latest_value} mg/dL**")
 
-            # -----------------
-            # INSULIN RECOMMENDATION GAUGE
-            # -----------------
-            st.markdown("#### 🎯 Insulin Recommendation Gauge")
+            # -------------------
+            # Recommendation + Gauge
+            # -------------------
+            import plotly.graph_objects as go
 
             if latest_value < 70:
-                suggestion = "⚠️ LOW! Eat carbs immediately, no insulin now."
-                gauge_level = 0
-                color = "🔵"
+                suggestion = "⚠️ Low! Eat carbs, **no insulin now**."
+                color = "red"
+                value = 20
             elif 70 <= latest_value <= 140:
-                suggestion = "✅ Normal range. Maintain current insulin dose."
-                gauge_level = 40
-                color = "🟢"
+                suggestion = "✅ Normal range. Maintain your current insulin dose."
+                color = "green"
+                value = 50
             elif 140 < latest_value <= 200:
                 suggestion = "⚠️ High. Suggested correction: **2–4 units insulin**."
-                gauge_level = 70
-                color = "🟡"
+                color = "orange"
+                value = 75
             else:
                 suggestion = "🔥 Very high! Suggested correction: **5–8 units insulin**."
-                gauge_level = 100
-                color = "🔴"
+                color = "red"
+                value = 95
 
-            # Styled progress bar
-            st.progress(gauge_level / 100)
+            # Show recommendation card
+            st.markdown(
+                f"""
+                <div style="padding:15px; border-radius:12px; background-color:{color}; color:white; font-size:18px;">
+                    {suggestion}
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-            # Show recommendation
-            st.markdown(f"### {color} Recommendation")
-            st.info(suggestion)
-
-            # -----------------
-            # SUMMARY TABLE
-            # -----------------
-            st.markdown("#### 📅 Daily Insulin Summary")
-            insulin_summary = pd.DataFrame({
-                "Date": daily_insulin.index,
-                "Total Insulin (units)": daily_insulin.values
-            })
-            st.dataframe(insulin_summary, use_container_width=True)
-
-         
-
+            # Gauge chart
+            fig = go.Figure(
+                go.Indicator(
+                    mode="gauge+number",
+                    value=value,
+                    title={"text": "Insulin Suggestion Level"},
+                    gauge={
+                        "axis": {"range": [0, 100]},
+                        "bar": {"color": color},
+                        "steps": [
+                            {"range": [0, 50], "color": "lightgreen"},
+                            {"range": [50, 80], "color": "yellow"},
+                            {"range": [80, 100], "color": "red"},
+                        ],
+                    },
+                )
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
 
         # Diet
