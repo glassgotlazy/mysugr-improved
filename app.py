@@ -116,78 +116,108 @@ import streamlit as st
 import random
 
 # ----------------------
-# Categorized Meals Dataset
+import streamlit as st
+import random
+
+# ----------------------
+# Categorized Meals Dataset with Ratings
 # ----------------------
 meals = {
     "Breakfast": [
         {
             "title": "Oatmeal with Berries",
             "img": "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "250 kcal", "Carbs": "45 g", "Protein": "8 g", "Fat": "5 g"}
+            "nutrition": {"Calories": "250 kcal", "Carbs": "45 g", "Protein": "8 g", "Fat": "5 g"},
+            "rating": 5
         },
         {
             "title": "Avocado Toast",
             "img": "https://images.unsplash.com/photo-1559628233-3ae08c0cd88d?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "280 kcal", "Carbs": "30 g", "Protein": "8 g", "Fat": "12 g"}
+            "nutrition": {"Calories": "280 kcal", "Carbs": "30 g", "Protein": "8 g", "Fat": "12 g"},
+            "rating": 4
         },
         {
             "title": "Veggie Omelette",
             "img": "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "300 kcal", "Carbs": "5 g", "Protein": "20 g", "Fat": "22 g"}
+            "nutrition": {"Calories": "300 kcal", "Carbs": "5 g", "Protein": "20 g", "Fat": "22 g"},
+            "rating": 5
         },
     ],
     "Lunch": [
         {
             "title": "Grilled Chicken Salad",
             "img": "https://images.unsplash.com/photo-1551218808-94e220e084d2?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "350 kcal", "Carbs": "20 g", "Protein": "40 g", "Fat": "10 g"}
+            "nutrition": {"Calories": "350 kcal", "Carbs": "20 g", "Protein": "40 g", "Fat": "10 g"},
+            "rating": 5
         },
         {
             "title": "Turkey Sandwich",
             "img": "https://images.unsplash.com/photo-1565958011703-44e9f3f31ef3?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "320 kcal", "Carbs": "40 g", "Protein": "25 g", "Fat": "12 g"}
+            "nutrition": {"Calories": "320 kcal", "Carbs": "40 g", "Protein": "25 g", "Fat": "12 g"},
+            "rating": 4
         },
         {
             "title": "Quinoa Bowl with Veggies",
             "img": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "370 kcal", "Carbs": "55 g", "Protein": "15 g", "Fat": "10 g"}
+            "nutrition": {"Calories": "370 kcal", "Carbs": "55 g", "Protein": "15 g", "Fat": "10 g"},
+            "rating": 5
         },
     ],
     "Dinner": [
         {
             "title": "Salmon with Veggies",
             "img": "https://images.unsplash.com/photo-1516685018646-549d9c0a7a48?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "400 kcal", "Carbs": "15 g", "Protein": "35 g", "Fat": "18 g"}
+            "nutrition": {"Calories": "400 kcal", "Carbs": "15 g", "Protein": "35 g", "Fat": "18 g"},
+            "rating": 5
         },
         {
             "title": "Brown Rice & Grilled Fish",
             "img": "https://images.unsplash.com/photo-1512058564366-c9e1d31714af?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "450 kcal", "Carbs": "50 g", "Protein": "32 g", "Fat": "15 g"}
+            "nutrition": {"Calories": "450 kcal", "Carbs": "50 g", "Protein": "32 g", "Fat": "15 g"},
+            "rating": 4
         },
         {
             "title": "Tofu Stir Fry",
             "img": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "350 kcal", "Carbs": "30 g", "Protein": "22 g", "Fat": "15 g"}
+            "nutrition": {"Calories": "350 kcal", "Carbs": "30 g", "Protein": "22 g", "Fat": "15 g"},
+            "rating": 5
         },
     ],
     "Snacks": [
         {
             "title": "Greek Yogurt with Nuts",
             "img": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "200 kcal", "Carbs": "15 g", "Protein": "12 g", "Fat": "8 g"}
+            "nutrition": {"Calories": "200 kcal", "Carbs": "15 g", "Protein": "12 g", "Fat": "8 g"},
+            "rating": 4
         },
         {
             "title": "Fruit Smoothie",
             "img": "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "180 kcal", "Carbs": "42 g", "Protein": "5 g", "Fat": "2 g"}
+            "nutrition": {"Calories": "180 kcal", "Carbs": "42 g", "Protein": "5 g", "Fat": "2 g"},
+            "rating": 5
         },
         {
             "title": "Lentil Soup",
             "img": "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "220 kcal", "Carbs": "35 g", "Protein": "14 g", "Fat": "4 g"}
+            "nutrition": {"Calories": "220 kcal", "Carbs": "35 g", "Protein": "14 g", "Fat": "4 g"},
+            "rating": 5
         },
     ]
 }
+
+# ----------------------
+# Health Tips
+# ----------------------
+health_tips = [
+    "💧 Stay hydrated – always pair meals with water.",
+    "🍎 Add more fiber for stable blood sugar.",
+    "🥦 Aim for colorful veggies – each color = new nutrients!",
+    "🕒 Stick to consistent meal timings for better glucose control.",
+    "🏃 Move for 10–15 min after meals to help balance sugar.",
+    "⚖️ Balance carbs, protein & fat for steady energy.",
+    "🍋 Add lemon/lime for flavor without extra calories.",
+    "🚫 Avoid processed sugar – go natural when possible."
+]
 
 # ----------------------
 # Diet Tab
@@ -207,14 +237,29 @@ for idx, category in enumerate(meals.keys()):
             st.subheader(meal["title"])
             st.image(meal["img"], caption=meal["title"], use_container_width=True)
 
+            # Show rating
+            st.write("**Health Rating:** " + "⭐" * meal["rating"])
+
+            # Nutrition table
             st.write("**Nutrition Info:**")
             st.table(meal["nutrition"])
+
+            # Health tip
+            st.info(random.choice(health_tips))
 
         # Manual selection
         choice = st.selectbox(f"👉 Pick a {category} meal:", [m["title"] for m in meals[category]], key=f"choice_{category}")
         meal = next(m for m in meals[category] if m["title"] == choice)
+
+        st.subheader(meal["title"])
         st.image(meal["img"], caption=meal["title"], use_container_width=True)
 
+        # Show rating
+        st.write("**Health Rating:** " + "⭐" * meal["rating"])
+
+        # Nutrition table
         st.write("**Nutrition Info:**")
         st.table(meal["nutrition"])
 
+        # Health tip
+        st.success(random.choice(health_tips))
