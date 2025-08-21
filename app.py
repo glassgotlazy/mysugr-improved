@@ -31,13 +31,13 @@ st.markdown("""
 .block-container{padding-top:1rem;}
 h1,h2,h3{color:var(--ink); letter-spacing:-0.02em;}
 .small{color:var(--muted); font-size:0.9rem;}
-.kpi{background:linear-gradient(180deg,#fff, #f8fbff);
+.kpi{background:linear-gradient(180deg,#fff, #ff9933);
      border:1px solid var(--ring); border-radius:16px; padding:14px 16px;
      box-shadow:0 6px 18px rgba(2,6,23,0.04);}
 .kpi .label{color:var(--muted); font-size:0.85rem;}
 .kpi .value{font-size:1.6rem; font-weight:700; color:var(--ink);}
 .section{border:1px solid var(--ring); border-radius:16px; padding:16px; background:#fff;}
-.badge{display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid var(--ring); background:#fff; font-size:0.85rem;}
+.badge{display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid var(--ring); background:#ff5050; font-size:0.85rem;}
 .hr{height:1px; background:var(--ring); margin:8px 0 16px;}
 .stTabs [data-baseweb="tab-list"] { gap: 6px; }
 .stTabs [data-baseweb="tab"] { background: #fff; border:1px solid var(--ring); border-radius:12px; padding:8px 12px; }
