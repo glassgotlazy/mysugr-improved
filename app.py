@@ -95,19 +95,36 @@ def process_file(file):
             st.metric("Total Insulin Taken", f"{total_insulin:.1f} units")
 
             # -------------------
-            # INSULIN RECOMMENDATION
+            # Insulin
+        with tabs[1]:
+            st.subheader("💉 Insulin Tracking")
+            st.line_chart(df.set_index("datetime")["insulin"])
+            total_insulin = df["insulin"].sum()
+            st.metric("Total Insulin Taken", f"{total_insulin:.1f} units")
+
+            # -------------------
+            # INSULIN RECOMMENDATION + BAR
             # -------------------
             st.markdown("### 🧠 Insulin Recommendations")
             latest_value = df["blood_sugar_measurement_(mg/dl)"].iloc[-1]
 
+            # Show latest value
+            st.write(f"📌 Latest Blood Sugar: **{latest_value} mg/dL**")
+
+            # Suggestion logic
             if latest_value < 70:
-                st.error(f"⚠️ Latest sugar: {latest_value} mg/dL → LOW! Eat carbs, **no insulin now**.")
+                st.error("⚠️ LOW! Eat carbs, **no insulin now**.")
+                st.progress(0)  # 0% bar
             elif 70 <= latest_value <= 140:
-                st.success(f"✅ Latest sugar: {latest_value} mg/dL → Normal range. Maintain your current insulin dose.")
+                st.success("✅ Normal range. Maintain your current insulin dose.")
+                st.progress(40)  # 40% bar
             elif 140 < latest_value <= 200:
-                st.warning(f"⚠️ Latest sugar: {latest_value} mg/dL → High. Suggested correction: **2–4 units insulin**.")
+                st.warning("⚠️ High. Suggested correction: **2–4 units insulin**.")
+                st.progress(70)  # 70% bar
             else:
-                st.error(f"🔥 Latest sugar: {latest_value} mg/dL → Very high! Suggested correction: **5–8 units insulin**.")
+                st.error("🔥 Very high! Suggested correction: **5–8 units insulin**.")
+                st.progress(100)  # full bar
+
 
         # Diet
         with tabs[2]:
