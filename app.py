@@ -110,7 +110,8 @@ with tabs[2]:
         st.error(f"❌ Error in insulin recommendation: {e}")
 
 # -------------------------
-# Diet Recommendations Tab (Interactive)
+# -------------------------
+# Diet Recommendations Tab (Interactive Carousel Style)
 # -------------------------
 with tabs[3]:
     st.header("🍎 Diet Recommendations")
@@ -124,23 +125,59 @@ with tabs[3]:
             if bs_level < 70:
                 st.warning("⚠️ Your blood sugar is LOW.")
                 st.success("🍯 Fast-acting carbs followed by a balanced snack recommended.")
-                st.image("https://www.diabetes.org/sites/default/files/styles/paragraph_large/public/2023-06/Glucose%20Tablet.jpg", caption="Glucose Tablets / Juice")
-                st.image("https://hips.hearstapps.com/hmg-prod/images/protein-snacks-1629407626.jpg", caption="Balanced Snack (Protein + Carbs)")
+
+                meals = [
+                    {"title": "Glucose Tablets", 
+                     "img": "https://www.diabetes.org/sites/default/files/styles/paragraph_large/public/2023-06/Glucose%20Tablet.jpg"},
+                    {"title": "Fruit Juice", 
+                     "img": "https://hips.hearstapps.com/hmg-prod/images/glass-of-orange-juice-royalty-free-image-1628179032.jpg"},
+                    {"title": "Balanced Snack (Protein + Carbs)", 
+                     "img": "https://hips.hearstapps.com/hmg-prod/images/protein-snacks-1629407626.jpg"}
+                ]
 
             elif 70 <= bs_level <= 140:
                 st.success("✅ Normal range.")
                 st.info("🥗 Eat a balanced meal with lean protein, complex carbs, and vegetables.")
-                st.image("https://www.eatingwell.com/thmb/n0Uu2t91jNVF2nZXuBLDX17jJ_E=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/balanced-meal-plate-4f54077d1aa44c8c8c55c5e67e67432a.jpg", caption="Balanced Meal")
+
+                meals = [
+                    {"title": "Balanced Meal Plate", 
+                     "img": "https://www.eatingwell.com/thmb/n0Uu2t91jNVF2nZXuBLDX17jJ_E=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/balanced-meal-plate-4f54077d1aa44c8c8c55c5e67e67432a.jpg"},
+                    {"title": "Grilled Salmon with Veggies", 
+                     "img": "https://www.eatingwell.com/thmb/2mKZnXZwCkhAXRjWJm7clv1OylE=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/grilled-salmon-vegetables-2000-1a2d17f4b6e94ad7852f04d3a8f44e1a.jpg"},
+                    {"title": "Chicken Salad Bowl", 
+                     "img": "https://www.eatingwell.com/thmb/oFz94KfT3RkLRQqgmGBK1bnlT2I=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/chicken-salad-2000-cc6c8b6a5b244cb68f26f373db73a9b5.jpg"}
+                ]
 
             elif 140 < bs_level <= 200:
                 st.warning("⚠️ Slightly high sugar.")
                 st.info("🍗 Focus on low-carb meals with protein and fiber.")
-                st.image("https://www.eatingwell.com/thmb/ijWcZcUby6rO-TeHCPhrwQjH4EQ=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/chicken-veggie-stir-fry-2000-91d1e691a2124c10a902a26b5ff1ed7d.jpg", caption="Low-carb Meal")
+
+                meals = [
+                    {"title": "Chicken & Veggie Stir-Fry", 
+                     "img": "https://www.eatingwell.com/thmb/ijWcZcUby6rO-TeHCPhrwQjH4EQ=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/chicken-veggie-stir-fry-2000-91d1e691a2124c10a902a26b5ff1ed7d.jpg"},
+                    {"title": "Grilled Chicken & Broccoli", 
+                     "img": "https://www.eatingwell.com/thmb/XG7T0YuywJH2mghOb0P7cF3n1uM=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/chicken-broccoli-2000-083993ab2b6a4fc39d3b8a6dfdf3948a.jpg"},
+                    {"title": "Zucchini Noodles with Pesto", 
+                     "img": "https://www.eatingwell.com/thmb/nQce9nZftt3VYTrMT9aB7f65h_c=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/zucchini-noodles-2000-1a84f9a8ad454d2287ad7fa1b79d51d0.jpg"}
+                ]
 
             else:
                 st.error("🚨 Very high sugar!")
                 st.info("🥦 Stick to very low-carb meals. Avoid sugar completely.")
-                st.image("https://www.eatingwell.com/thmb/o4LJ9Hge6B4xF65Ut9P3XWhM5lc=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/green-salad-2000-0b4741c728074e5a8e9b8fbb1c9f6a0a.jpg", caption="Green Salad & Lean Protein")
+
+                meals = [
+                    {"title": "Green Salad & Lean Protein", 
+                     "img": "https://www.eatingwell.com/thmb/o4LJ9Hge6B4xF65Ut9P3XWhM5lc=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/green-salad-2000-0b4741c728074e5a8e9b8fbb1c9f6a0a.jpg"},
+                    {"title": "Steamed Veggies & Tofu", 
+                     "img": "https://www.eatingwell.com/thmb/VsBoqKJ2vQ7-2moohsTjqOSClCE=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/steamed-veggies-tofu-2000-9d68dd22d5484ecf85869aa0f2a14c0b.jpg"},
+                    {"title": "Avocado Salad Bowl", 
+                     "img": "https://www.eatingwell.com/thmb/lX2Q5IQ1VYBaN4U5N7DCVmMYrFQ=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/avocado-salad-2000-2a4a7d2e4dbf4a27b7f91d75c05053fa.jpg"}
+                ]
+
+            # Carousel Simulation
+            choice = st.radio("👉 Choose your recommended meal:", [m["title"] for m in meals])
+            meal = next(m for m in meals if m["title"] == choice)
+            st.image(meal["img"], caption=meal["title"], use_container_width=True)
 
     except Exception as e:
         st.error(f"❌ Error in diet recommendation: {e}")
