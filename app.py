@@ -67,14 +67,19 @@ if uploaded_file:
     ax.legend()
     st.pyplot(fig)
 
-    # --- Diet & Insulin Check ---
+    # --- Diet & Insulin Check (fixed duplicate IDs) ---
     st.subheader("✅ Daily Checks")
-    diet_followed = st.checkbox("Diet followed?")
+    diet_followed = st.checkbox("Diet followed?", key="diet_check")
     if not diet_followed:
-        diet_note = st.text_input("If not, what was followed?")
-    insulin_followed = st.checkbox("Insulin taken as prescribed?")
+        diet_note = st.text_input("If not, what diet was followed?", key="diet_note")
+    else:
+        diet_note = None
+
+    insulin_followed = st.checkbox("Insulin taken as prescribed?", key="insulin_check")
     if not insulin_followed:
-        insulin_note = st.text_input("If not, what was followed?")
+        insulin_note = st.text_input("If not, what insulin routine was followed?", key="insulin_note")
+    else:
+        insulin_note = None
 
     # --- Export to PDF ---
     st.subheader("📄 Export Report")
