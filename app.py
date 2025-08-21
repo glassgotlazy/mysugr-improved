@@ -1,305 +1,138 @@
 import streamlit as st
 import pandas as pd
+import random
 import plotly.express as px
 
-# -------------------------
-# Page Config
-# -------------------------
-st.set_page_config(
-    page_title="MySugar Advanced",
-    page_icon="💉",
-    layout="wide"
-)
+# ----------------------------
+# Sample Diet Plans Dictionary
+# ----------------------------
+diet_plans = {
+    "Breakfast": [
+        {
+            "name": "Oatmeal with Berries",
+            "description": "Healthy oats with fresh seasonal berries and almonds.",
+            "image": "https://www.eatingwell.com/thmb/jH4_1A3R-9G5gSFDQ.jpg",
+            "nutrition": {"Calories": 350, "Protein": 12, "Carbs": 55, "Fat": 8},
+        },
+        {
+            "name": "Greek Yogurt Parfait",
+            "description": "Layers of Greek yogurt, honey, and granola.",
+            "image": "https://www.cookingclassy.com/wp-content/uploads/2019/04/yogurt-parfait-2.jpg",
+            "nutrition": {"Calories": 280, "Protein": 15, "Carbs": 35, "Fat": 7},
+        },
+    ],
+    "Lunch": [
+        {
+            "name": "Grilled Chicken Salad",
+            "description": "Lean grilled chicken with leafy greens and vinaigrette.",
+            "image": "https://www.simplyrecipes.com/thmb/OV3mA9.jpg",
+            "nutrition": {"Calories": 420, "Protein": 30, "Carbs": 25, "Fat": 15},
+        },
+        {
+            "name": "Veggie Wrap",
+            "description": "Whole wheat tortilla with hummus and mixed veggies.",
+            "image": "https://www.acouplecooks.com/wp-content/uploads/2020/04/Veggie-Wraps-010.jpg",
+            "nutrition": {"Calories": 310, "Protein": 10, "Carbs": 45, "Fat": 9},
+        },
+    ],
+    "Dinner": [
+        {
+            "name": "Salmon with Quinoa",
+            "description": "Pan-seared salmon with lemon butter and quinoa salad.",
+            "image": "https://www.wellplated.com/wp-content/uploads/2019/09/Baked-Salmon-in-Foil-Recipe.jpg",
+            "nutrition": {"Calories": 500, "Protein": 35, "Carbs": 40, "Fat": 20},
+        },
+        {
+            "name": "Stir-fried Tofu & Veggies",
+            "description": "High-protein tofu stir fry with colorful vegetables.",
+            "image": "https://minimalistbaker.com/wp-content/uploads/2019/06/Easy-Tofu-Stir-Fry-SQUARE.jpg",
+            "nutrition": {"Calories": 380, "Protein": 20, "Carbs": 30, "Fat": 14},
+        },
+    ],
+}
 
-st.title("🩸 MySugar - Diabetes Tracking Dashboard")
+# Track weekly totals
+weekly_totals = {"Calories": 0, "Protein": 0, "Carbs": 0, "Fat": 0}
 
-# -------------------------
-# Tabs
-# -------------------------
-tabs = st.tabs([
-    "📊 Dashboard",
-    "🥗 Diet Tracking",
-    "💉 Insulin Recommendations",
-    "🍎 Diet Recommendations"
-])
+# ----------------------------
+# Streamlit App Layout
+# ----------------------------
+st.set_page_config(page_title="MySugr Improved", layout="wide")
+st.title("📊 MySugr Advanced Dashboard")
 
-# -------------------------
+tabs = st.tabs(["📂 Dashboard", "💉 Insulin Recommendation", "🍽️ Diet Recommendation"])
+
+# ----------------------------
 # Dashboard Tab
-# -------------------------
+# ----------------------------
 with tabs[0]:
-    st.header("📊 Dashboard")
-
-    uploaded_file = st.file_uploader("📂 Upload your CSV file", type="csv")
+    st.header("📂 Upload Your Data")
+    uploaded_file = st.file_uploader("Upload your MySugr CSV file", type=["csv"])
 
     if uploaded_file:
         try:
             df = pd.read_csv(uploaded_file)
-
-            # Normalize column names
-            df.columns = df.columns.str.strip().str.lower()
-
-            # Merge date & time into datetime if available
-            if "date" in df.columns and "time" in df.columns:
-                df["datetime"] = pd.to_datetime(df["date"] + " " + df["time"], errors="coerce")
-            elif "datetime" in df.columns:
-                df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
-            else:
-                st.error("❌ No 'datetime' column found.")
-                st.stop()
-
-            # Show preview
             st.success("✅ File uploaded successfully!")
             st.dataframe(df.head())
 
-            # Line chart for Blood Sugar
             if "blood sugar measurement (mg/dl)" in df.columns:
-                fig = px.line(df, x="datetime", y="blood sugar measurement (mg/dl)", title="Blood Sugar Over Time")
+                fig = px.line(
+                    df,
+                    x=df.index,
+                    y="blood sugar measurement (mg/dl)",
+                    title="Blood Sugar Trend",
+                )
                 st.plotly_chart(fig, use_container_width=True)
-
-            # Line chart for Insulin
-            insulin_cols = [col for col in df.columns if "insulin" in col]
-            if insulin_cols:
-                for col in insulin_cols:
-                    fig = px.line(df, x="datetime", y=col, title=f"{col.title()} Over Time")
-                    st.plotly_chart(fig, use_container_width=True)
-
         except Exception as e:
             st.error(f"❌ Error processing file: {e}")
-    else:
-        st.info("Upload a CSV file to see your dashboard.")
 
-# -------------------------
-# Diet Tracking Tab
-# -------------------------
+# ----------------------------
+# Insulin Recommendation Tab
+# ----------------------------
 with tabs[1]:
-    st.header("🥗 Diet Tracking")
+    st.header("💉 Insulin Recommendation")
+    sugar_level = st.number_input("Enter current blood sugar (mg/dL)", min_value=50, max_value=400, value=120)
+    carbs = st.number_input("Enter planned carb intake (grams)", min_value=0, max_value=200, value=50)
 
-    st.write("Keep track of whether you followed your diet plan today.")
-
-    col1, col2 = st.columns([1, 2])
-
-    with col1:
-        diet_followed = st.checkbox("✅ Did you follow your diet today?")
-
-    with col2:
-        if not diet_followed:
-            st.text_input("❌ If not, what did you eat instead?")
-
-# -------------------------
-# Insulin Recommendations Tab
-# -------------------------
-with tabs[2]:
-    st.header("💉 Insulin Recommendations")
-    st.write("AI-assisted insulin dose guidance based on your blood sugar levels.")
-
-    try:
-        blood_sugar = st.number_input("Enter current blood sugar (mg/dL)", min_value=50, max_value=500, step=1)
-        carbs = st.number_input("Enter meal carbs (grams)", min_value=0, max_value=200, step=1)
-        insulin_sensitivity = st.slider("Insulin Sensitivity Factor (mg/dL per unit)", 10, 100, 50)
-        carb_ratio = st.slider("Carb Ratio (grams per unit insulin)", 5, 30, 15)
-
-        if st.button("💉 Get Recommendation"):
-            correction_dose = (blood_sugar - 120) / insulin_sensitivity if blood_sugar > 120 else 0
-            meal_dose = carbs / carb_ratio
-            total_dose = max(0, correction_dose + meal_dose)
-
-            st.success(f"💉 Recommended insulin dose: **{total_dose:.1f} units**")
-            st.info(f"- Correction Dose: {correction_dose:.1f}\n- Meal Dose: {meal_dose:.1f}")
-
-    except Exception as e:
-        st.error(f"❌ Error in insulin recommendation: {e}")
-
-import random
-import streamlit as st
-
-# Meals categorized with nutrition
-meals = {
-    "Breakfast": [
-        {"name": "Oatmeal with Fruits", 
-         "img": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd",
-         "nutrition": {"Calories": 250, "Protein": 8, "Carbs": 45, "Fat": 5}},
-        {"name": "Avocado Toast", 
-         "img": "https://images.unsplash.com/photo-1551183053-bf91a1d81141",
-         "nutrition": {"Calories": 300, "Protein": 10, "Carbs": 30, "Fat": 12}},
-        {"name": "Smoothie Bowl", 
-         "img": "https://images.unsplash.com/photo-1505253216365-4f5b2b9d5d99",
-         "nutrition": {"Calories": 280, "Protein": 9, "Carbs": 40, "Fat": 7}},
-    ],
-    "Lunch": [
-        {"name": "Grilled Chicken Salad", 
-         "img": "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
-         "nutrition": {"Calories": 400, "Protein": 35, "Carbs": 20, "Fat": 15}},
-        {"name": "Quinoa Bowl", 
-         "img": "https://images.unsplash.com/photo-1604909053369-f06d9f9a1f8e",
-         "nutrition": {"Calories": 420, "Protein": 18, "Carbs": 55, "Fat": 12}},
-    ],
-    "Dinner": [
-        {"name": "Baked Salmon with Veggies", 
-         "img": "https://images.unsplash.com/photo-1589923188900-3f4e1f3edbe0",
-         "nutrition": {"Calories": 500, "Protein": 40, "Carbs": 25, "Fat": 22}},
-        {"name": "Veggie Stir Fry", 
-         "img": "https://images.unsplash.com/photo-1589927986089-3581237894ef",
-         "nutrition": {"Calories": 350, "Protein": 12, "Carbs": 50, "Fat": 10}},
-    ],
-    "Snack": [
-        {"name": "Greek Yogurt with Honey", 
-         "img": "https://images.unsplash.com/photo-1588361861125-d3a1a0b5e3cb",
-         "nutrition": {"Calories": 180, "Protein": 12, "Carbs": 20, "Fat": 4}},
-        {"name": "Mixed Nuts", 
-         "img": "https://images.unsplash.com/photo-1604908554266-95c0d37db114",
-         "nutrition": {"Calories": 200, "Protein": 6, "Carbs": 8, "Fat": 18}},
-    ]
-}
-
-days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
-categories = ["Breakfast", "Lunch", "Dinner", "Snack"]
-# ----------------------------
-# Setup Weekly Meals Rotation
-# ----------------------------
-days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-categories = list(diet_plans.keys())  # Use categories from diet_plans
-
-if "weekly_meals" not in st.session_state:
-    st.session_state.weekly_meals = {}
-    for i, day in enumerate(days):
-        category = categories[i % len(categories)]
-        st.session_state.weekly_meals[day] = random.choice(diet_plans[category])  # ✅ use diet_plans
+    if st.button("Get Insulin Suggestion"):
+        suggested_units = (carbs / 12) + ((sugar_level - 100) / 50)
+        suggested_units = max(0, round(suggested_units, 1))
+        st.success(f"💉 Suggested Insulin Dose: {suggested_units} units")
 
 # ----------------------------
-# 🍽️ Diet Recommendation Tab
+# Diet Recommendation Tab
 # ----------------------------
 with tabs[2]:
     st.header("🍽️ Personalized Diet Recommendation")
 
-    # Pick meal type
+    categories = list(diet_plans.keys())
     selected_category = st.selectbox("Choose a meal type", categories)
 
     if selected_category:
-        meals = diet_plans[selected_category]   # ✅ defined here properly
+        meals = diet_plans[selected_category]
         meal = random.choice(meals)
 
-        # Show meal recommendation
         st.subheader(f"Recommended {selected_category}: {meal['name']}")
 
         cols = st.columns(2)
-
-        # Meal image
         with cols[0]:
             st.image(meal["image"], use_container_width=True)
-
-        # Meal details + nutrition
         with cols[1]:
             st.write(meal["description"])
             st.markdown("**Nutritional Info:**")
 
             cols2 = st.columns(4)
             for i, (k, v) in enumerate(meal["nutrition"].items()):
-                key = k.capitalize()
-                if key not in st.session_state:   # ✅ store safely in session_state
-                    st.session_state[key] = 0
-
-                try:
-                    val = float(v)
-                except Exception:
-                    val = 0
-
-                # Show nutrition metric
-                cols2[i % 4].metric(
-                    key, f"{val}{'g' if key != 'Calories' else ''}"
-                )
-
-                # Add to weekly totals
-                st.session_state[key] += val
+                cols2[i % 4].metric(k, f"{v}{'g' if k != 'Calories' else ''}")
+                weekly_totals[k] += v
 
         st.markdown("---")
         st.markdown("### ⭐ Rate this Meal")
-        rating = st.radio(
+        st.radio(
             "How do you like this meal?",
             ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"],
-            horizontal=True
+            horizontal=True,
         )
 
         st.markdown("### 💬 Feedback")
-        feedback = st.text_area("Any comments or suggestions?")
-
-
-
-import streamlit as st
-import pandas as pd
-import random
-from datetime import datetime
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.pagesizes import A4
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
-
-# ----------------------
-# Export Helper: Excel
-# ----------------------
-def export_excel(df, doctor_name):
-    filename = f"diet_history_{doctor_name}_{datetime.now().strftime('%Y%m%d')}.xlsx"
-    df.to_excel(filename, index=False)
-    return filename
-
-# ----------------------
-# Export Helper: PDF
-# ----------------------
-def export_pdf(df, doctor_name):
-    filename = f"diet_history_{doctor_name}_{datetime.now().strftime('%Y%m%d')}.pdf"
-    doc = SimpleDocTemplate(filename, pagesize=A4)
-    styles = getSampleStyleSheet()
-    elements = []
-
-    # Title
-    elements.append(Paragraph(f"Diet History Report - Dr. {doctor_name}", styles["Title"]))
-    elements.append(Spacer(1, 12))
-
-    # Convert dataframe to table
-    table_data = [df.columns.tolist()] + df.values.tolist()
-    table = Table(table_data)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-    ]))
-    elements.append(table)
-
-    doc.build(elements)
-    return filename
-
-# ----------------------
-# Diet History Tab (updated)
-# ----------------------
-with diet_tabs[-1]:
-    st.markdown("### 📊 Your Meal Rating History")
-
-    doctor_name = st.text_input("👨‍⚕️ Enter your Doctor’s Name")
-
-    try:
-        df = pd.read_csv("diet_history.csv")
-        st.dataframe(df)
-
-        avg_ratings = df.groupby("meal")["rating"].mean().sort_values(ascending=False)
-        st.bar_chart(avg_ratings)
-
-        if doctor_name.strip():
-            st.markdown("### 📂 Export Options")
-            col1, col2 = st.columns(2)
-
-            with col1:
-                if st.button("📥 Export to Excel"):
-                    file = export_excel(df, doctor_name.strip().replace(" ", "_"))
-                    st.success(f"✅ Excel file saved as {file}")
-
-            with col2:
-                if st.button("📄 Export to PDF"):
-                    file = export_pdf(df, doctor_name.strip().replace(" ", "_"))
-                    st.success(f"✅ PDF file saved as {file}")
-
-        else:
-            st.info("ℹ️ Please enter your Doctor’s name to enable exports.")
-
-    except FileNotFoundError:
-        st.info("No ratings saved yet. Start rating meals to build your history!")
+        st.text_area("Any comments or suggestions?")
