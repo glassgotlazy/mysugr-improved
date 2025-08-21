@@ -89,72 +89,92 @@ def process_file(file):
 
         # =====================
                # -------------------
-        # INSULIN TAB
-        # -------------------
-        with tabs[1]:
-            st.subheader("💉 Insulin Tracking")
+      # ==============================
+# 📊 Insulin Recommendation Tab
+# ==============================
+with tabs[3]:
+    st.markdown("### 💉 Insulin Recommendations")
+    st.write("Get AI-assisted insights for your insulin dosage.")
 
-            # Line chart of insulin usage
-            st.line_chart(df.set_index("datetime")["insulin"], height=300)
+    # Sidebar-like input panel
+    st.markdown("#### 🔧 Customize your input")
+    col1, col2 = st.columns(2)
 
-            total_insulin = df["insulin"].sum()
-            st.metric("Total Insulin Taken", f"{total_insulin:.1f} units")
+    with col1:
+        current_sugar = st.number_input(
+            "🩸 Current Blood Sugar (mg/dL)", min_value=50, max_value=400, value=120
+        )
+        target_sugar = st.number_input(
+            "🎯 Target Blood Sugar (mg/dL)", min_value=70, max_value=150, value=100
+        )
 
-            st.markdown("### 🧠 Smart Insulin Recommendations")
+    with col2:
+        carbs = st.slider(
+            "🍽️ Estimated Carbs (grams)", min_value=0, max_value=200, value=50, step=5
+        )
+        insulin_sensitivity = st.slider(
+            "⚡ Insulin Sensitivity Factor (mg/dL drop per unit)",
+            min_value=10, max_value=100, value=50, step=5
+        )
+        carb_ratio = st.slider(
+            "🥖 Insulin-to-Carb Ratio (g/unit)",
+            min_value=5, max_value=30, value=15, step=1
+        )
 
-            latest_value = df["blood_sugar_measurement_(mg/dl)"].iloc[-1]
-            st.write(f"📌 Latest Blood Sugar: **{latest_value} mg/dL**")
+    # === Calculation ===
+    correction_dose = max((current_sugar - target_sugar) / insulin_sensitivity, 0)
+    meal_dose = carbs / carb_ratio
+    total_dose = round(correction_dose + meal_dose, 1)
 
-            # -------------------
-            # Recommendation + Gauge
-            # -------------------
-            import plotly.graph_objects as go
+    # === Fancy gauge meter ===
+    import plotly.graph_objects as go
 
-            if latest_value < 70:
-                suggestion = "⚠️ Low! Eat carbs, **no insulin now**."
-                color = "red"
-                value = 20
-            elif 70 <= latest_value <= 140:
-                suggestion = "✅ Normal range. Maintain your current insulin dose."
-                color = "green"
-                value = 50
-            elif 140 < latest_value <= 200:
-                suggestion = "⚠️ High. Suggested correction: **2–4 units insulin**."
-                color = "orange"
-                value = 75
-            else:
-                suggestion = "🔥 Very high! Suggested correction: **5–8 units insulin**."
-                color = "red"
-                value = 95
+    gauge = go.Figure(
+        go.Indicator(
+            mode="gauge+number+delta",
+            value=total_dose,
+            delta={'reference': 5, "increasing": {"color": "red"}, "decreasing": {"color": "green"}},
+            title={'text': "💉 Suggested Insulin Units"},
+            gauge={
+                'axis': {'range': [0, 20]},
+                'bar': {'color': "blue"},
+                'steps': [
+                    {'range': [0, 5], 'color': "lightgreen"},
+                    {'range': [5, 10], 'color': "yellow"},
+                    {'range': [10, 20], 'color': "red"}
+                ],
+                'threshold': {'line': {'color': "black", 'width': 4}, 'thickness': 0.8, 'value': total_dose}
+            }
+        )
+    )
 
-            # Show recommendation card
-            st.markdown(
-                f"""
-                <div style="padding:15px; border-radius:12px; background-color:{color}; color:white; font-size:18px;">
-                    {suggestion}
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+    st.plotly_chart(gauge, use_container_width=True)
 
-            # Gauge chart
-            fig = go.Figure(
-                go.Indicator(
-                    mode="gauge+number",
-                    value=value,
-                    title={"text": "Insulin Suggestion Level"},
-                    gauge={
-                        "axis": {"range": [0, 100]},
-                        "bar": {"color": color},
-                        "steps": [
-                            {"range": [0, 50], "color": "lightgreen"},
-                            {"range": [50, 80], "color": "yellow"},
-                            {"range": [80, 100], "color": "red"},
-                        ],
-                    },
-                )
-            )
-            st.plotly_chart(fig, use_container_width=True)
+    # === Recommendation Cards ===
+    st.markdown("#### 🧾 Recommendation")
+    if total_dose == 0:
+        st.success("✅ No insulin needed. You're within target range!")
+    elif total_dose <= 5:
+        st.info(f"👉 Suggested Dose: **{total_dose} units** (small correction).")
+    elif total_dose <= 10:
+        st.warning(f"⚠️ Suggested Dose: **{total_dose} units** (moderate dose). Monitor closely.")
+    else:
+        st.error(f"🚨 Suggested Dose: **{total_dose} units** (high dose). Please double-check with your doctor!")
+
+    # === Historical insulin vs sugar trends ===
+    if not df.empty:
+        st.markdown("#### 📈 Insulin & Sugar Trends")
+        insulin_trend = df[['datetime', 'blood sugar measurement (mg/dl)', 'insulin']]
+        insulin_trend = insulin_trend.dropna()
+
+        fig = px.line(
+            insulin_trend,
+            x="datetime",
+            y=["blood sugar measurement (mg/dl)", "insulin"],
+            labels={"value": "Level", "variable": "Measurement"},
+            title="📊 Blood Sugar vs Insulin Trend",
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
 
         # Diet
