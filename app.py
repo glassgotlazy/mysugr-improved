@@ -126,115 +126,83 @@ import pandas as pd
 from datetime import datetime
 
 # ----------------------
-# Categorized Meals Dataset with Tips
-# ----------------------
+import random
+import streamlit as st
+
+# Meals categorized with nutrition
 meals = {
     "Breakfast": [
-        {
-            "title": "Oatmeal with Berries",
-            "img": "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "250 kcal", "Carbs": "45 g", "Protein": "8 g", "Fat": "5 g"},
-            "tip": "Great for steady energy release. Add chia seeds for extra fiber!"
-        },
-        {
-            "title": "Avocado Toast",
-            "img": "https://images.unsplash.com/photo-1559628233-3ae08c0cd88d?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "280 kcal", "Carbs": "30 g", "Protein": "8 g", "Fat": "12 g"},
-            "tip": "Rich in healthy fats! Pair with eggs for extra protein."
-        },
+        {"name": "Oatmeal with Fruits", 
+         "img": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd",
+         "nutrition": {"Calories": 250, "Protein": "8g", "Carbs": "45g", "Fat": "5g"}},
+        {"name": "Avocado Toast", 
+         "img": "https://images.unsplash.com/photo-1551183053-bf91a1d81141",
+         "nutrition": {"Calories": 300, "Protein": "10g", "Carbs": "30g", "Fat": "12g"}},
+        {"name": "Smoothie Bowl", 
+         "img": "https://images.unsplash.com/photo-1505253216365-4f5b2b9d5d99",
+         "nutrition": {"Calories": 280, "Protein": "9g", "Carbs": "40g", "Fat": "7g"}},
     ],
     "Lunch": [
-        {
-            "title": "Grilled Chicken Salad",
-            "img": "https://images.unsplash.com/photo-1551218808-94e220e084d2?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "350 kcal", "Carbs": "20 g", "Protein": "40 g", "Fat": "10 g"},
-            "tip": "Loaded with protein. Add olive oil for heart-healthy fats."
-        },
-        {
-            "title": "Quinoa Bowl with Veggies",
-            "img": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "370 kcal", "Carbs": "55 g", "Protein": "15 g", "Fat": "10 g"},
-            "tip": "Quinoa is a complete protein—great for muscle repair."
-        },
+        {"name": "Grilled Chicken Salad", 
+         "img": "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
+         "nutrition": {"Calories": 400, "Protein": "35g", "Carbs": "20g", "Fat": "15g"}},
+        {"name": "Quinoa Bowl", 
+         "img": "https://images.unsplash.com/photo-1604909053369-f06d9f9a1f8e",
+         "nutrition": {"Calories": 420, "Protein": "18g", "Carbs": "55g", "Fat": "12g"}},
     ],
     "Dinner": [
-        {
-            "title": "Salmon with Veggies",
-            "img": "https://images.unsplash.com/photo-1516685018646-549d9c0a7a48?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "400 kcal", "Carbs": "15 g", "Protein": "35 g", "Fat": "18 g"},
-            "tip": "Rich in omega-3s for brain and heart health."
-        },
-        {
-            "title": "Tofu Stir Fry",
-            "img": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "350 kcal", "Carbs": "30 g", "Protein": "22 g", "Fat": "15 g"},
-            "tip": "Plant-based protein powerhouse!"
-        },
+        {"name": "Baked Salmon with Veggies", 
+         "img": "https://images.unsplash.com/photo-1589923188900-3f4e1f3edbe0",
+         "nutrition": {"Calories": 500, "Protein": "40g", "Carbs": "25g", "Fat": "22g"}},
+        {"name": "Veggie Stir Fry", 
+         "img": "https://images.unsplash.com/photo-1589927986089-3581237894ef",
+         "nutrition": {"Calories": 350, "Protein": "12g", "Carbs": "50g", "Fat": "10g"}},
     ],
-    "Snacks": [
-        {
-            "title": "Greek Yogurt with Nuts",
-            "img": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "200 kcal", "Carbs": "15 g", "Protein": "12 g", "Fat": "8 g"},
-            "tip": "Protein-rich snack for in-between meals."
-        },
-        {
-            "title": "Fruit Smoothie",
-            "img": "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=800&q=80",
-            "nutrition": {"Calories": "180 kcal", "Carbs": "42 g", "Protein": "5 g", "Fat": "2 g"},
-            "tip": "Blend with spinach for hidden nutrients!"
-        },
+    "Snack": [
+        {"name": "Greek Yogurt with Honey", 
+         "img": "https://images.unsplash.com/photo-1588361861125-d3a1a0b5e3cb",
+         "nutrition": {"Calories": 180, "Protein": "12g", "Carbs": "20g", "Fat": "4g"}},
+        {"name": "Mixed Nuts", 
+         "img": "https://images.unsplash.com/photo-1604908554266-95c0d37db114",
+         "nutrition": {"Calories": 200, "Protein": "6g", "Carbs": "8g", "Fat": "18g"}},
     ]
 }
 
-# ----------------------
-# Helper to Save Ratings
-# ----------------------
-def save_rating(category, meal, rating):
-    entry = {
-        "datetime": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "category": category,
-        "meal": meal,
-        "rating": rating
-    }
-    try:
-        df = pd.read_csv("diet_history.csv")
-        df = pd.concat([df, pd.DataFrame([entry])], ignore_index=True)
-    except FileNotFoundError:
-        df = pd.DataFrame([entry])
-    df.to_csv("diet_history.csv", index=False)
+days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+categories = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
-# ----------------------
-# Diet Tab
-# ----------------------
-st.subheader("🍴 Diet Recommendations")
+# Rotate through meals
+if "weekly_meals" not in st.session_state:
+    st.session_state.weekly_meals = {}
+    for i, day in enumerate(days):
+        category = categories[i % len(categories)]
+        st.session_state.weekly_meals[day] = random.choice(meals[category])
 
-diet_tabs = st.tabs(list(meals.keys()) + ["📊 Diet History"])
+# UI
+st.title("🍽️ Auto-Balanced Weekly Diet Plan")
 
-# Loop through categories
-for idx, category in enumerate(meals.keys()):
-    with diet_tabs[idx]:
-        st.markdown(f"### 🍽 {category} Ideas")
+for day in days:
+    meal = st.session_state.weekly_meals[day]
+    st.subheader(f"{day} → {meal['name']}")
+    st.image(meal["img"], caption=meal["name"], use_container_width=True)
 
-        # Random meal button
-        if st.button(f"🎲 Random {category} Meal", key=f"random_{category}"):
-            meal = random.choice(meals[category])
-        else:
-            choice = st.selectbox(f"👉 Pick a {category} meal:", [m["title"] for m in meals[category]], key=f"choice_{category}")
-            meal = next(m for m in meals[category] if m["title"] == choice)
+    # Nutrition breakdown
+    st.markdown("**📊 Nutrition Breakdown:**")
+    cols = st.columns(4)
+    for i, (k, v) in enumerate(meal["nutrition"].items()):
+        cols[i].metric(k, v)
 
-        # Display meal
-        st.subheader(meal["title"])
-        st.image(meal["img"], caption=meal["title"], use_container_width=True)
-        st.write("**Nutrition Info:**")
-        st.table(meal["nutrition"])
-        st.info(f"💡 Tip: {meal['tip']}")
+    # Replace option
+    if st.button(f"🔄 Change {day}"):
+        for cat, meal_list in meals.items():
+            if meal in meal_list:
+                st.session_state.weekly_meals[day] = random.choice(meal_list)
+        st.rerun()
 
-        # ⭐ Rating system
-        rating = st.slider("⭐ Rate this meal", 1, 5, 3, key=f"rate_{meal['title']}")
-        if st.button(f"💾 Save Rating for {meal['title']}", key=f"save_{meal['title']}"):
-            save_rating(category, meal["title"], rating)
-            st.success("✅ Rating saved!")
+    # Rating + Notes
+    st.slider(f"⭐ Rate {meal['name']}", 1, 5, 3, key=f"rating_{day}")
+    st.text_area(f"📝 Notes for {meal['name']}", key=f"note_{day}")
+    st.write("---")
 
 # ----------------------
 # Diet History Tab
