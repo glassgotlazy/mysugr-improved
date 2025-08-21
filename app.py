@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from datetime import datetime
 
 st.set_page_config(page_title="MySugr Improved", page_icon="💉", layout="wide")
 
@@ -40,33 +39,35 @@ if uploaded_file is not None:
         # Convert datetime column
         df[datetime_col] = pd.to_datetime(df[datetime_col], errors="coerce")
         df = df.dropna(subset=[datetime_col, glucose_col])
-        df = df.sort_values(by=datetime_col)
 
-        # Rename for consistency
-        df = df.rename(columns={datetime_col: "DateTime", glucose_col: "Glucose"})
+        if df.empty:
+            st.error("❌ No valid data found after cleaning. Please check your CSV file formatting.")
+        else:
+            df = df.sort_values(by=datetime_col)
+            df = df.rename(columns={datetime_col: "DateTime", glucose_col: "Glucose"})
 
-        # Show summary
-        st.subheader("📊 Data Summary")
-        st.write(df.describe())
+            # Show summary
+            st.subheader("📊 Data Summary")
+            st.write(df.describe())
 
-        # Plot
-        st.subheader("📈 Blood Sugar Trend")
-        fig, ax = plt.subplots(figsize=(10, 5))
-        ax.plot(df["DateTime"], df["Glucose"], marker="o", linestyle="-", color="teal")
-        ax.axhline(140, color="red", linestyle="--", label="High (140 mg/dL)")
-        ax.axhline(70, color="orange", linestyle="--", label="Low (70 mg/dL)")
-        ax.set_ylabel("Glucose (mg/dL)")
-        ax.set_xlabel("Date & Time")
-        ax.legend()
-        st.pyplot(fig)
+            # Plot
+            st.subheader("📈 Blood Sugar Trend")
+            fig, ax = plt.subplots(figsize=(10, 5))
+            ax.plot(df["DateTime"], df["Glucose"], marker="o", linestyle="-", color="teal")
+            ax.axhline(140, color="red", linestyle="--", label="High (140 mg/dL)")
+            ax.axhline(70, color="orange", linestyle="--", label="Low (70 mg/dL)")
+            ax.set_ylabel("Glucose (mg/dL)")
+            ax.set_xlabel("Date & Time")
+            ax.legend()
+            st.pyplot(fig)
 
-        # Latest reading
-        latest = df.iloc[-1]
-        st.metric(
-            label="Latest Reading",
-            value=f"{latest['Glucose']} mg/dL",
-            delta=f"{(latest['Glucose'] - df['Glucose'].mean()):.1f} vs avg",
-        )
+            # Latest reading safely
+            latest = df.iloc[-1]
+            st.metric(
+                label="Latest Reading",
+                value=f"{latest['Glucose']} mg/dL",
+                delta=f"{(latest['Glucose'] - df['Glucose'].mean()):.1f} vs avg",
+            )
 
     except Exception as e:
         st.error(f"❌ Error processing file: {e}")
