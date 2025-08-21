@@ -60,7 +60,7 @@ def diet_suggestions(glucose):
             "🧘‍♂️ Rest and monitor closely."
         ]
 
-# ---------------------------
+# ---------------------------\
 # File Upload
 # ---------------------------
 uploaded_file = st.file_uploader("📂 Upload your MySugr CSV file", type=["csv"])
