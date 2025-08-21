@@ -194,15 +194,18 @@ for day in days:
 # Nutrition breakdown
 st.markdown("**📊 Nutrition Breakdown:**")
 cols = st.columns(4)
+
 for i, (k, v) in enumerate(meal["nutrition"].items()):
     # Standardize key names
     key = k.capitalize()
     if key not in weekly_totals:
         weekly_totals[key] = 0
+
     try:
         val = float(v)  # Convert to number
     except:
         val = 0
+
     cols[i].metric(key, f"{val}{'g' if key != 'Calories' else ''}")
     weekly_totals[key] += val
 
