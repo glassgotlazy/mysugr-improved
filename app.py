@@ -1,221 +1,116 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.pagesizes import letter
-from io import BytesIO
+import plotly.express as px
 
-# -------------------
-# PAGE CONFIG
-# -------------------
-st.set_page_config(page_title="MySugar Advanced", page_icon="💉", layout="wide")
-
-# -------------------
-# HEADER WITH EXTRA SPACING
-# -------------------
-st.markdown(
-    """
-    <style>
-        .main-title {
-            font-size: 36px;
-            color: #2E86C1;
-            text-align: center;
-            font-weight: bold;
-            margin-top: 30px;
-            margin-bottom: 15px;
-        }
-        .subtitle {
-            text-align: center;
-            color: #117A65;
-            font-size: 18px;
-            margin-bottom: 40px;
-        }
-        .block-container {
-            padding-top: 2rem;
-            padding-bottom: 2rem;
-        }
-    </style>
-    <div class="main-title">💉 MySugar Advanced</div>
-    <div class="subtitle">Track Blood Sugar • Manage Insulin • Stay Healthy</div>
-    """,
-    unsafe_allow_html=True
+# -------------------------
+# Page Config
+# -------------------------
+st.set_page_config(
+    page_title="MySugar Advanced",
+    page_icon="💉",
+    layout="wide"
 )
 
-# -------------------
-# PROCESS FILE FUNCTION
-# -------------------
-def process_file(file):
-    try:
-        df = pd.read_csv(file)
+st.title("🩸 MySugar - Diabetes Tracking Dashboard")
 
-        # Clean column names
-        df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
+# -------------------------
+# Tabs
+# -------------------------
+tabs = st.tabs([
+    "📊 Dashboard",
+    "📂 Upload Data",
+    "🥗 Diet Tracking",
+    "💉 Insulin Recommendations"
+])
 
-        # Handle datetime
-        if "datetime" not in df.columns:
+# -------------------------
+# Dashboard Tab
+# -------------------------
+with tabs[0]:
+    st.header("📊 Dashboard")
+    st.write("Overview of your blood sugar and insulin trends.")
+
+    st.info("Upload your CSV file in the **Upload Data** tab to see charts here.")
+
+# -------------------------
+# Upload Data Tab
+# -------------------------
+with tabs[1]:
+    st.header("📂 Upload Data")
+    uploaded_file = st.file_uploader("Upload your CSV file", type="csv")
+
+    if uploaded_file:
+        try:
+            df = pd.read_csv(uploaded_file)
+
+            # Normalize column names
+            df.columns = df.columns.str.strip().str.lower()
+
+            # Merge date & time into datetime if available
             if "date" in df.columns and "time" in df.columns:
                 df["datetime"] = pd.to_datetime(df["date"] + " " + df["time"], errors="coerce")
+            elif "datetime" in df.columns:
+                df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
             else:
-                st.error("❌ No valid 'datetime' found.")
-                return
+                st.error("❌ No 'datetime' column found.")
+                st.stop()
 
-        # Ensure sugar column exists
-        if "blood_sugar_measurement_(mg/dl)" not in df.columns:
-            st.error("❌ Missing 'blood sugar measurement (mg/dl)' column.")
-            return
+            # Show preview
+            st.success("✅ File uploaded successfully!")
+            st.dataframe(df.head())
 
-        # Handle insulin column
-        if "insulin" not in df.columns:
-            insulin_cols = [c for c in df.columns if "insulin" in c]
+            # Line chart for Blood Sugar
+            if "blood sugar measurement (mg/dl)" in df.columns:
+                fig = px.line(df, x="datetime", y="blood sugar measurement (mg/dl)", title="Blood Sugar Over Time")
+                st.plotly_chart(fig, use_container_width=True)
+
+            # Line chart for Insulin
+            insulin_cols = [col for col in df.columns if "insulin" in col]
             if insulin_cols:
-                df["insulin"] = df[insulin_cols].sum(axis=1, numeric_only=True)
-            else:
-                df["insulin"] = 0
+                for col in insulin_cols:
+                    fig = px.line(df, x="datetime", y=col, title=f"{col.title()} Over Time")
+                    st.plotly_chart(fig, use_container_width=True)
 
-        df = df.sort_values("datetime")
+        except Exception as e:
+            st.error(f"❌ Error processing file: {e}")
 
-        # -------------------
-        # NAVIGATION TABS
-        # -------------------
-        tabs = st.tabs(["📊 Dashboard", "💉 Insulin Insights", "🍽 Diet Tracking", "📄 Reports"])
+# -------------------------
+# Diet Tracking Tab
+# -------------------------
+with tabs[2]:
+    st.header("🥗 Diet Tracking")
 
-        # Dashboard
-        with tabs[0]:
-            st.subheader("📊 Blood Sugar Overview")
-            st.line_chart(df.set_index("datetime")["blood_sugar_measurement_(mg/dl)"])
-            avg = df["blood_sugar_measurement_(mg/dl)"].mean()
-            st.metric("Average Blood Sugar", f"{avg:.1f} mg/dL")
+    st.write("Keep track of whether you followed your diet plan today.")
 
-        # =====================
-               # -------------------
-      # ==============================
-# ==============================
-# ==============================
-# 📊 Insulin Recommendation Tab
-# ==============================
-with tabs[3]:
-    st.markdown("### 💉 Insulin Recommendations")
-    st.write("Get AI-assisted insights for your insulin dosage.")
-
-    # Sidebar-like input panel
-    st.markdown("#### 🔧 Customize your input")
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([1, 2])
 
     with col1:
-        current_sugar = st.number_input(
-            "🩸 Current Blood Sugar (mg/dL)", min_value=50, max_value=400, value=120
-        )
-        target_sugar = st.number_input(
-            "🎯 Target Blood Sugar (mg/dL)", min_value=70, max_value=150, value=100
-        )
+        diet_followed = st.checkbox("✅ Did you follow your diet today?")
 
     with col2:
-        carbs = st.slider(
-            "🍽️ Estimated Carbs (grams)", min_value=0, max_value=200, value=50, step=5
-        )
-        insulin_sensitivity = st.slider(
-            "⚡ Insulin Sensitivity Factor (mg/dL drop per unit)",
-            min_value=10, max_value=100, value=50, step=5
-        )
-        carb_ratio = st.slider(
-            "🥖 Insulin-to-Carb Ratio (g/unit)",
-            min_value=5, max_value=30, value=15, step=1
-        )
+        if not diet_followed:
+            st.text_input("❌ If not, what did you eat instead?")
 
-    # === Calculation ===
-    correction_dose = max((current_sugar - target_sugar) / insulin_sensitivity, 0)
-    meal_dose = carbs / carb_ratio
-    total_dose = round(correction_dose + meal_dose, 1)
+# -------------------------
+# Insulin Recommendations Tab
+# -------------------------
+with tabs[3]:
+    st.header("💉 Insulin Recommendations")
+    st.write("AI-assisted insulin dose guidance based on your blood sugar levels.")
 
-    # === Gauge chart ===
-    import plotly.graph_objects as go
+    try:
+        blood_sugar = st.number_input("Enter current blood sugar (mg/dL)", min_value=50, max_value=500, step=1)
+        carbs = st.number_input("Enter meal carbs (grams)", min_value=0, max_value=200, step=1)
+        insulin_sensitivity = st.slider("Insulin Sensitivity Factor (mg/dL per unit)", 10, 100, 50)
+        carb_ratio = st.slider("Carb Ratio (grams per unit insulin)", 5, 30, 15)
 
-    gauge = go.Figure(
-        go.Indicator(
-            mode="gauge+number+delta",
-            value=total_dose,
-            delta={'reference': 5, "increasing": {"color": "red"}, "decreasing": {"color": "green"}},
-            title={'text': "💉 Suggested Insulin Units"},
-            gauge={
-                'axis': {'range': [0, 20]},
-                'bar': {'color': "blue"},
-                'steps': [
-                    {'range': [0, 5], 'color': "lightgreen"},
-                    {'range': [5, 10], 'color': "yellow"},
-                    {'range': [10, 20], 'color': "red"}
-                ],
-                'threshold': {'line': {'color': "black", 'width': 4}, 'thickness': 0.8, 'value': total_dose}
-            }
-        )
-    )
-    st.plotly_chart(gauge, use_container_width=True)
+        if st.button("💉 Get Recommendation"):
+            correction_dose = (blood_sugar - 120) / insulin_sensitivity if blood_sugar > 120 else 0
+            meal_dose = carbs / carb_ratio
+            total_dose = max(0, correction_dose + meal_dose)
 
-    # === Recommendation Cards ===
-    st.markdown("#### 🧾 Recommendation")
-    if total_dose == 0:
-        st.success("✅ No insulin needed. You're within target range!")
-    elif total_dose <= 5:
-        st.info(f"👉 Suggested Dose: **{total_dose} units** (small correction).")
-    elif total_dose <= 10:
-        st.warning(f"⚠️ Suggested Dose: **{total_dose} units** (moderate dose). Monitor closely.")
-    else:
-        st.error(f"🚨 Suggested Dose: **{total_dose} units** (high dose). Please double-check with your doctor!")
-
-    # === Historical insulin vs sugar trends ===
-    if not df.empty:
-        import plotly.express as px
-
-        st.markdown("#### 📈 Insulin & Sugar Trends")
-        insulin_trend = df[['datetime', 'blood sugar measurement (mg/dl)', 'insulin']].dropna()
-
-        fig = px.line(
-            insulin_trend,
-            x="datetime",
-            y=["blood sugar measurement (mg/dl)", "insulin"],
-            labels={"value": "Level", "variable": "Measurement"},
-            title="📊 Blood Sugar vs Insulin Trend",
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-        # Diet
-        with tabs[2]:
-            st.subheader("🍽 Diet Tracking")
-            followed_diet = st.checkbox("Did you follow your planned diet?")
-            if not followed_diet:
-                alt_diet = st.text_input("If not, what did you eat instead?")
-                if alt_diet:
-                    st.info(f"🍕 You reported eating: {alt_diet}")
-
-        # Report
-        with tabs[3]:
-            st.subheader("📄 Generate Health Report")
-            buffer = BytesIO()
-            doc = SimpleDocTemplate(buffer, pagesize=letter)
-            styles = getSampleStyleSheet()
-            elements = []
-            elements.append(Paragraph("MySugar Health Report", styles["Title"]))
-            elements.append(Spacer(1, 12))
-            elements.append(Paragraph(f"Average Blood Sugar: {avg:.1f} mg/dL", styles["Normal"]))
-            elements.append(Paragraph(f"Total Insulin: {total_insulin:.1f} units", styles["Normal"]))
-            doc.build(elements)
-
-            st.download_button(
-                label="⬇️ Download PDF Report",
-                data=buffer.getvalue(),
-                file_name="health_report.pdf",
-                mime="application/pdf"
-            )
+            st.success(f"💉 Recommended insulin dose: **{total_dose:.1f} units**")
+            st.info(f"- Correction Dose: {correction_dose:.1f}\n- Meal Dose: {meal_dose:.1f}")
 
     except Exception as e:
-        st.error(f"❌ Error processing file: {e}")
-
-
-# -------------------
-# FILE UPLOAD
-# -------------------
-uploaded_file = st.sidebar.file_uploader("📂 Upload CSV Data", type="csv")
-if uploaded_file:
-    process_file(uploaded_file)
-else:
-    st.info("📂 Please upload your CSV file to continue.")
+        st.error(f"❌ Error in insulin recommendation: {e}")
