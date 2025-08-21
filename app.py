@@ -112,110 +112,109 @@ with tabs[2]:
 import random
 import streamlit as st
 
-# ----------------------
-# Meals Dataset (10+ options)
-# ----------------------
-meals = [
-    {
-        "title": "Grilled Chicken Salad",
-        "img": "https://images.unsplash.com/photo-1551218808-94e220e084d2",
-        "nutrition": {"Calories": "350 kcal", "Carbs": "20 g", "Protein": "40 g", "Fat": "10 g"}
-    },
-    {
-        "title": "Oatmeal with Berries",
-        "img": "https://images.unsplash.com/photo-1525351484163-7529414344d8",
-        "nutrition": {"Calories": "250 kcal", "Carbs": "45 g", "Protein": "8 g", "Fat": "5 g"}
-    },
-    {
-        "title": "Salmon with Veggies",
-        "img": "https://images.unsplash.com/photo-1516685018646-549d9c0a7a48",
-        "nutrition": {"Calories": "400 kcal", "Carbs": "15 g", "Protein": "35 g", "Fat": "18 g"}
-    },
-    {
-        "title": "Avocado Toast",
-        "img": "https://images.unsplash.com/photo-1559628233-3ae08c0cd88d",
-        "nutrition": {"Calories": "280 kcal", "Carbs": "30 g", "Protein": "8 g", "Fat": "12 g"}
-    },
-    {
-        "title": "Greek Yogurt with Nuts",
-        "img": "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
-        "nutrition": {"Calories": "200 kcal", "Carbs": "15 g", "Protein": "12 g", "Fat": "8 g"}
-    },
-    {
-        "title": "Veggie Omelette",
-        "img": "https://images.unsplash.com/photo-1551183053-bf91a1d81141",
-        "nutrition": {"Calories": "300 kcal", "Carbs": "5 g", "Protein": "20 g", "Fat": "22 g"}
-    },
-    {
-        "title": "Quinoa Bowl with Veggies",
-        "img": "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
-        "nutrition": {"Calories": "370 kcal", "Carbs": "55 g", "Protein": "15 g", "Fat": "10 g"}
-    },
-    {
-        "title": "Turkey Sandwich",
-        "img": "https://images.unsplash.com/photo-1565958011703-44e9f3f31ef3",
-        "nutrition": {"Calories": "320 kcal", "Carbs": "40 g", "Protein": "25 g", "Fat": "12 g"}
-    },
-    {
-        "title": "Tofu Stir Fry",
-        "img": "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
-        "nutrition": {"Calories": "350 kcal", "Carbs": "30 g", "Protein": "22 g", "Fat": "15 g"}
-    },
-    {
-        "title": "Lentil Soup",
-        "img": "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0",
-        "nutrition": {"Calories": "220 kcal", "Carbs": "35 g", "Protein": "14 g", "Fat": "4 g"}
-    },
-    {
-        "title": "Fruit Smoothie",
-        "img": "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
-        "nutrition": {"Calories": "180 kcal", "Carbs": "42 g", "Protein": "5 g", "Fat": "2 g"}
-    },
-    {
-        "title": "Brown Rice & Grilled Fish",
-        "img": "https://images.unsplash.com/photo-1512058564366-c9e1d31714af",
-        "nutrition": {"Calories": "450 kcal", "Carbs": "50 g", "Protein": "32 g", "Fat": "15 g"}
-    }
-]
+import streamlit as st
+import random
 
 # ----------------------
-# Diet Recommendation Tab
+# Categorized Meals Dataset
+# ----------------------
+meals = {
+    "Breakfast": [
+        {
+            "title": "Oatmeal with Berries",
+            "img": "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=800&q=80",
+            "nutrition": {"Calories": "250 kcal", "Carbs": "45 g", "Protein": "8 g", "Fat": "5 g"}
+        },
+        {
+            "title": "Avocado Toast",
+            "img": "https://images.unsplash.com/photo-1559628233-3ae08c0cd88d?auto=format&fit=crop&w=800&q=80",
+            "nutrition": {"Calories": "280 kcal", "Carbs": "30 g", "Protein": "8 g", "Fat": "12 g"}
+        },
+        {
+            "title": "Veggie Omelette",
+            "img": "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=800&q=80",
+            "nutrition": {"Calories": "300 kcal", "Carbs": "5 g", "Protein": "20 g", "Fat": "22 g"}
+        },
+    ],
+    "Lunch": [
+        {
+            "title": "Grilled Chicken Salad",
+            "img": "https://images.unsplash.com/photo-1551218808-94e220e084d2?auto=format&fit=crop&w=800&q=80",
+            "nutrition": {"Calories": "350 kcal", "Carbs": "20 g", "Protein": "40 g", "Fat": "10 g"}
+        },
+        {
+            "title": "Turkey Sandwich",
+            "img": "https://images.unsplash.com/photo-1565958011703-44e9f3f31ef3?auto=format&fit=crop&w=800&q=80",
+            "nutrition": {"Calories": "320 kcal", "Carbs": "40 g", "Protein": "25 g", "Fat": "12 g"}
+        },
+        {
+            "title": "Quinoa Bowl with Veggies",
+            "img": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80",
+            "nutrition": {"Calories": "370 kcal", "Carbs": "55 g", "Protein": "15 g", "Fat": "10 g"}
+        },
+    ],
+    "Dinner": [
+        {
+            "title": "Salmon with Veggies",
+            "img": "https://images.unsplash.com/photo-1516685018646-549d9c0a7a48?auto=format&fit=crop&w=800&q=80",
+            "nutrition": {"Calories": "400 kcal", "Carbs": "15 g", "Protein": "35 g", "Fat": "18 g"}
+        },
+        {
+            "title": "Brown Rice & Grilled Fish",
+            "img": "https://images.unsplash.com/photo-1512058564366-c9e1d31714af?auto=format&fit=crop&w=800&q=80",
+            "nutrition": {"Calories": "450 kcal", "Carbs": "50 g", "Protein": "32 g", "Fat": "15 g"}
+        },
+        {
+            "title": "Tofu Stir Fry",
+            "img": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80",
+            "nutrition": {"Calories": "350 kcal", "Carbs": "30 g", "Protein": "22 g", "Fat": "15 g"}
+        },
+    ],
+    "Snacks": [
+        {
+            "title": "Greek Yogurt with Nuts",
+            "img": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80",
+            "nutrition": {"Calories": "200 kcal", "Carbs": "15 g", "Protein": "12 g", "Fat": "8 g"}
+        },
+        {
+            "title": "Fruit Smoothie",
+            "img": "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=800&q=80",
+            "nutrition": {"Calories": "180 kcal", "Carbs": "42 g", "Protein": "5 g", "Fat": "2 g"}
+        },
+        {
+            "title": "Lentil Soup",
+            "img": "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=800&q=80",
+            "nutrition": {"Calories": "220 kcal", "Carbs": "35 g", "Protein": "14 g", "Fat": "4 g"}
+        },
+    ]
+}
+
+# ----------------------
+# Diet Tab
 # ----------------------
 st.subheader("🍴 Diet Recommendations")
 
-# Random meal button
-if st.button("🎲 Surprise Me with a Meal!"):
-    meal = random.choice(meals)
-    st.subheader(f"✨ Random Pick: {meal['title']}")
-    st.image(meal["img"], caption=meal["title"], use_container_width=True)
+category_tabs = st.tabs(list(meals.keys()))
 
-    view_type = st.radio("📊 How do you want to see nutrition info?", ["Badges", "Table"])
-    if view_type == "Badges":
-        badge_styles = {
-            "Calories": "background-color:#FFDD57;color:#000;padding:6px 12px;border-radius:12px;margin:3px;display:inline-block;font-weight:bold;",
-            "Carbs": "background-color:#4DB6FF;color:white;padding:6px 12px;border-radius:12px;margin:3px;display:inline-block;font-weight:bold;",
-            "Protein": "background-color:#57E47B;color:white;padding:6px 12px;border-radius:12px;margin:3px;display:inline-block;font-weight:bold;",
-            "Fat": "background-color:#FF6B6B;color:white;padding:6px 12px;border-radius:12px;margin:3px;display:inline-block;font-weight:bold;",
-        }
-        badges = " ".join([f"<span style='{badge_styles[nutr]}'>{nutr}: {val}</span>" for nutr, val in meal["nutrition"].items()])
-        st.markdown(badges, unsafe_allow_html=True)
-    else:
+# Loop through categories
+for idx, category in enumerate(meals.keys()):
+    with category_tabs[idx]:
+        st.markdown(f"### 🍽 {category} Ideas")
+
+        # Random meal button
+        if st.button(f"🎲 Random {category} Meal", key=f"random_{category}"):
+            meal = random.choice(meals[category])
+            st.subheader(meal["title"])
+            st.image(meal["img"], caption=meal["title"], use_container_width=True)
+
+            st.write("**Nutrition Info:**")
+            st.table(meal["nutrition"])
+
+        # Manual selection
+        choice = st.selectbox(f"👉 Pick a {category} meal:", [m["title"] for m in meals[category]], key=f"choice_{category}")
+        meal = next(m for m in meals[category] if m["title"] == choice)
+        st.image(meal["img"], caption=meal["title"], use_container_width=True)
+
+        st.write("**Nutrition Info:**")
         st.table(meal["nutrition"])
 
-# Manual selection
-choice = st.selectbox("👉 Or pick your meal:", [m["title"] for m in meals])
-meal = next(m for m in meals if m["title"] == choice)
-st.image(meal["img"], caption=meal["title"], use_container_width=True)
-
-view_type = st.radio("📊 Nutrition Info Format:", ["Badges", "Table"], key="meal_choice")
-if view_type == "Badges":
-    badge_styles = {
-        "Calories": "background-color:#FFDD57;color:#000;padding:6px 12px;border-radius:12px;margin:3px;display:inline-block;font-weight:bold;",
-        "Carbs": "background-color:#4DB6FF;color:white;padding:6px 12px;border-radius:12px;margin:3px;display:inline-block;font-weight:bold;",
-        "Protein": "background-color:#57E47B;color:white;padding:6px 12px;border-radius:12px;margin:3px;display:inline-block;font-weight:bold;",
-        "Fat": "background-color:#FF6B6B;color:white;padding:6px 12px;border-radius:12px;margin:3px;display:inline-block;font-weight:bold;",
-    }
-    badges = " ".join([f"<span style='{badge_styles[nutr]}'>{nutr}: {val}</span>" for nutr, val in meal["nutrition"].items()])
-    st.markdown(badges, unsafe_allow_html=True)
-else:
-    st.table(meal["nutrition"])
