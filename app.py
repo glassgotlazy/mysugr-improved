@@ -95,35 +95,63 @@ def process_file(file):
             st.metric("Total Insulin Taken", f"{total_insulin:.1f} units")
 
             # -------------------
-            # Insulin
+                  # =====================
+        # INSULIN TAB
+        # =====================
         with tabs[1]:
-            st.subheader("💉 Insulin Tracking")
+            st.subheader("💉 Insulin Insights")
+
+            # Plot insulin usage
+            st.markdown("#### 📊 Insulin Over Time")
             st.line_chart(df.set_index("datetime")["insulin"])
-            total_insulin = df["insulin"].sum()
-            st.metric("Total Insulin Taken", f"{total_insulin:.1f} units")
 
-            # -------------------
-            # INSULIN RECOMMENDATION + BAR
-            # -------------------
-            st.markdown("### 🧠 Insulin Recommendations")
+            # Daily average insulin
+            daily_insulin = df.groupby(df["datetime"].dt.date)["insulin"].sum()
+            st.bar_chart(daily_insulin)
+
+            # Latest reading
             latest_value = df["blood_sugar_measurement_(mg/dl)"].iloc[-1]
+            st.markdown(f"### 📌 Latest Blood Sugar: **{latest_value} mg/dL**")
 
-            # Show latest value
-            st.write(f"📌 Latest Blood Sugar: **{latest_value} mg/dL**")
+            # -----------------
+            # INSULIN RECOMMENDATION GAUGE
+            # -----------------
+            st.markdown("#### 🎯 Insulin Recommendation Gauge")
 
-            # Suggestion logic
             if latest_value < 70:
-                st.error("⚠️ LOW! Eat carbs, **no insulin now**.")
-                st.progress(0)  # 0% bar
+                suggestion = "⚠️ LOW! Eat carbs immediately, no insulin now."
+                gauge_level = 0
+                color = "🔵"
             elif 70 <= latest_value <= 140:
-                st.success("✅ Normal range. Maintain your current insulin dose.")
-                st.progress(40)  # 40% bar
+                suggestion = "✅ Normal range. Maintain current insulin dose."
+                gauge_level = 40
+                color = "🟢"
             elif 140 < latest_value <= 200:
-                st.warning("⚠️ High. Suggested correction: **2–4 units insulin**.")
-                st.progress(70)  # 70% bar
+                suggestion = "⚠️ High. Suggested correction: **2–4 units insulin**."
+                gauge_level = 70
+                color = "🟡"
             else:
-                st.error("🔥 Very high! Suggested correction: **5–8 units insulin**.")
-                st.progress(100)  # full bar
+                suggestion = "🔥 Very high! Suggested correction: **5–8 units insulin**."
+                gauge_level = 100
+                color = "🔴"
+
+            # Styled progress bar
+            st.progress(gauge_level / 100)
+
+            # Show recommendation
+            st.markdown(f"### {color} Recommendation")
+            st.info(suggestion)
+
+            # -----------------
+            # SUMMARY TABLE
+            # -----------------
+            st.markdown("#### 📅 Daily Insulin Summary")
+            insulin_summary = pd.DataFrame({
+                "Date": daily_insulin.index,
+                "Total Insulin (units)": daily_insulin.values
+            })
+            st.dataframe(insulin_summary, use_container_width=True)
+
 
 
         # Diet
