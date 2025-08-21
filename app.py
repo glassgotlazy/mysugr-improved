@@ -2,110 +2,99 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from datetime import datetime
 
-# ---------------------------
-# App Config
-# ---------------------------
-st.set_page_config(
-    page_title="MySugr AI Diabetes Assistant",
-    page_icon="🩸",
-    layout="wide"
-)
-
-st.title("🩸 MySugr AI Diabetes Assistant")
-st.markdown("Upload your **MySugr CSV file** and get personalized insights, insulin suggestions, and diet recommendations.")
-
-# ---------------------------
-# Helper Functions
-# ---------------------------
-def clean_columns(df):
-    col_map = {
-        'Date': 'Date',
-        'Time': 'Time',
-        'Blood Sugar Measurement (mg/dL)': 'Glucose',
-        'Blood Sugar': 'Glucose',
-        'Glucose': 'Glucose'
-    }
-    return df.rename(columns={c: col_map[c] for c in df.columns if c in col_map})
-
+# -------------------------------
+# Helper functions
+# -------------------------------
 def insulin_needed(current_glucose, target_glucose=150, isf=14.13):
+    """Calculate insulin correction dose."""
     if current_glucose <= target_glucose:
         return 0.0
-    return (current_glucose - target_glucose) / isf
+    return round((current_glucose - target_glucose) / isf, 2)
+
 
 def diet_suggestions(glucose):
+    """Return diet & lifestyle suggestions based on glucose level."""
     if glucose < 70:
-        return [
-            "🍯 Eat fast-acting carbs (glucose tablets, juice).",
-            "🍌 Follow up with fruit + protein snack.",
-            "⏱️ Recheck sugar in 15 mins."
-        ]
+        return "⚠️ Low sugar detected! Have a small snack (fruit juice, glucose tablet). Avoid excess insulin."
     elif 70 <= glucose <= 180:
-        return [
-            "🥗 Balanced diet: veggies, lean protein, whole grains.",
-            "🚶‍♂️ Light walk after meals.",
-            "💧 Drink water instead of sugary drinks."
-        ]
+        return "✅ Excellent! Maintain your balanced diet and regular exercise."
     elif 180 < glucose <= 250:
-        return [
-            "🥦 Reduce carbs, add more protein/veggies.",
-            "🚶‍♂️ Light activity recommended.",
-            "❌ Avoid sweets, fried food, soda."
-        ]
+        return "⚠️ Elevated sugar. Prefer high-fiber foods (veggies, whole grains) and hydrate well."
     else:
-        return [
-            "⚠️ Very high sugar! Consult doctor if persistent.",
-            "🥗 Strictly avoid carbs & fried foods.",
-            "💧 Drink water, stay hydrated.",
-            "🧘‍♂️ Rest and monitor closely."
-        ]
+        return "🚨 High sugar detected! Avoid carbs/sugary foods. Consult your doctor if persistent."
 
-# ---------------------------\
-# File Upload
-# ---------------------------
-uploaded_file = st.file_uploader("📂 Upload your MySugr CSV file", type=["csv"])
 
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
-    df = clean_columns(df)
+# -------------------------------
+# Streamlit UI
+# -------------------------------
+st.set_page_config(page_title="MySugr Improved", layout="wide")
 
-    if "Glucose" not in df.columns:
-        st.error("❌ CSV must contain 'Blood Sugar Measurement (mg/dL)' or 'Glucose' column.")
-    else:
-        if "Date" in df.columns and "Time" in df.columns:
-            df["DateTime"] = pd.to_datetime(df["Date"] + " " + df["Time"], errors="coerce")
-        elif "Date" in df.columns:
-            df["DateTime"] = pd.to_datetime(df["Date"], errors="coerce")
+st.title("🩸 MySugr Improved – Glucose & Insulin Tracker")
+
+st.sidebar.header("📂 Upload Your Data")
+uploaded_file = st.sidebar.file_uploader("Upload CSV", type=["csv"])
+
+# Example expected columns
+st.sidebar.markdown(
+    "Your CSV must have columns: **DateTime**, **Blood Sugar Measurement (mg/dL)**"
+)
+
+# If file is uploaded
+if uploaded_file:
+    try:
+        df = pd.read_csv(uploaded_file)
+
+        # Normalize column names
+        df.columns = df.columns.str.strip()
+
+        # Check required columns
+        if not {"DateTime", "Blood Sugar Measurement (mg/dL)"}.issubset(df.columns):
+            st.error("❌ CSV must contain 'DateTime' and 'Blood Sugar Measurement (mg/dL)' columns.")
         else:
-            df["DateTime"] = pd.to_datetime("now")
+            # Convert datetime
+            df["DateTime"] = pd.to_datetime(df["DateTime"], errors="coerce")
+            df = df.dropna(subset=["DateTime"])
 
-        glucose_df = df[["DateTime", "Glucose"]].dropna()
+            st.success("✅ Data loaded successfully!")
 
-        avg_glucose = glucose_df["Glucose"].mean()
-        latest_glucose = glucose_df["Glucose"].iloc[-1]
+            # Show preview
+            st.subheader("📊 Uploaded Data Preview")
+            st.dataframe(df.head())
 
-        st.metric("📊 Average Glucose", f"{avg_glucose:.2f} mg/dL")
-        st.metric("🩸 Latest Glucose", f"{latest_glucose} mg/dL")
+            # Plot glucose readings
+            st.subheader("📈 Glucose Levels Over Time")
+            fig, ax = plt.subplots(figsize=(10, 4))
+            sns.lineplot(data=df, x="DateTime", y="Blood Sugar Measurement (mg/dL)", marker="o", ax=ax)
+            ax.axhline(150, color="green", linestyle="--", label="Target (150)")
+            ax.set_ylabel("Blood Sugar (mg/dL)")
+            ax.legend()
+            st.pyplot(fig)
 
-        st.subheader("💉 Insulin Correction Suggestion")
-        correction = insulin_needed(latest_glucose)
-        st.write(f"➡️ Suggested correction dose: **{correction:.2f} units**")
+            # Select a row
+            st.subheader("📌 Pick a reading for analysis")
+            selected_row = st.selectbox(
+                "Select by DateTime & Value",
+                options=df.itertuples(index=False),
+                format_func=lambda x: f"{x.DateTime.strftime('%Y-%m-%d %H:%M')} → {x[1]} mg/dL",
+            )
 
-        st.subheader("🥗 Diet & Lifestyle Suggestions")
-        for s in diet_suggestions(latest_glucose):
-            st.markdown(f"- {s}")
+            if selected_row:
+                glucose_val = selected_row[1]
 
-        st.subheader("📈 Glucose Trend Over Time")
-        fig, ax = plt.subplots(figsize=(10,5))
-        sns.lineplot(data=glucose_df, x="DateTime", y="Glucose", marker="o", ax=ax)
-        ax.axhline(150, color="green", linestyle="--", label="Target (150)")
-        ax.axhline(180, color="orange", linestyle="--", label="Upper Normal (180)")
-        ax.axhline(250, color="red", linestyle="--", label="High (250)")
-        ax.set_title("Glucose Levels Over Time")
-        ax.set_ylabel("Glucose (mg/dL)")
-        ax.set_xlabel("Date/Time")
-        ax.legend()
-        st.pyplot(fig)
+                st.metric("📍 Selected Reading", f"{glucose_val} mg/dL")
 
+                # Insulin suggestion
+                insulin_units = insulin_needed(glucose_val)
+                st.subheader("💉 Insulin Recommendation")
+                st.write(f"Suggested correction dose: **{insulin_units} units**")
+
+                # Diet suggestion
+                st.subheader("🥗 Diet & Lifestyle Suggestion")
+                st.info(diet_suggestions(glucose_val))
+
+    except Exception as e:
+        st.error(f"Error reading file: {e}")
 else:
-    st.info("📂 Please upload your MySugr CSV file to continue.")
+    st.warning("👆 Upload your CSV file to begin.")
