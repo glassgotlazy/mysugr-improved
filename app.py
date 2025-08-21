@@ -1,166 +1,124 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from datetime import datetime
 
-void main() {
-  runApp(const MySugrApp());
-}
+# ---------------------------
+# App Config
+# ---------------------------
+st.set_page_config(
+    page_title="MySugr AI Diabetes Assistant",
+    page_icon="🩸",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-class MySugrApp extends StatelessWidget {
-  const MySugrApp({super.key});
+st.title("🩸 MySugr AI Diabetes Assistant")
+st.markdown("Upload your **MySugr CSV file** and get personalized insights, insulin suggestions, and diet recommendations.")
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: "MySugr AI Coach",
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        textTheme: GoogleFonts.poppinsTextTheme(),
-        primarySwatch: Colors.teal,
-      ),
-      home: const HomeScreen(),
-    );
-  }
-}
-
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  List<List<dynamic>> _csvData = [];
-  List<double> glucoseValues = [];
-
-  Future<void> _pickCSV() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['csv'],
-    );
-
-    if (result != null) {
-      final file = File(result.files.single.path!);
-      final content = await file.readAsString();
-      List<List<dynamic>> rows = const CsvToListConverter().convert(content);
-
-      setState(() {
-        _csvData = rows;
-        glucoseValues = rows.skip(1).map((r) => (r[3] as num).toDouble()).toList();
-      });
+# ---------------------------
+# Helper Functions
+# ---------------------------
+def clean_columns(df):
+    """Rename columns to standard names if needed"""
+    col_map = {
+        'Date': 'Date',
+        'Time': 'Time',
+        'Blood Sugar Measurement (mg/dL)': 'Glucose',
+        'Blood Sugar': 'Glucose',
+        'Glucose': 'Glucose'
     }
-  }
+    df = df.rename(columns={c: col_map[c] for c in df.columns if c in col_map})
+    return df
 
-  double insulinNeeded(double currentGlucose, {double targetGlucose = 150, double isf = 14.13}) {
-    if (currentGlucose <= targetGlucose) return 0.0;
-    return (currentGlucose - targetGlucose) / isf;
-  }
+def insulin_needed(current_glucose, target_glucose=150, isf=14.13):
+    """Correction dose calculator"""
+    if current_glucose <= target_glucose:
+        return 0.0
+    return (current_glucose - target_glucose) / isf
 
-  String dietSuggestion(double glucose) {
-    if (glucose > 250) {
-      return "❌ High glucose!\nAvoid sweets, white rice, bread.\nEat leafy vegetables, salads, and light proteins.";
-    } else if (glucose < 80) {
-      return "⚠️ Low glucose!\nEat 15g fast carbs (banana, glucose tablet, juice). Recheck after 15 mins.";
-    } else {
-      return "✅ Normal glucose!\nBalanced diet: whole grains, lean proteins, veggies, nuts.";
-    }
-  }
+def diet_suggestions(glucose):
+    """Rule-based diet suggestions"""
+    if glucose < 70:
+        return [
+            "🍯 Eat fast-acting carbs (like glucose tablets, juice).",
+            "🍌 Follow up with a balanced snack (fruit + protein).",
+            "⏱️ Recheck sugar in 15 mins."
+        ]
+    elif 70 <= glucose <= 180:
+        return [
+            "🥗 Continue with a balanced diet (veggies, lean protein, whole grains).",
+            "🚶‍♂️ Light walk after meals helps maintain stability.",
+            "💧 Stay hydrated (water > sugary drinks)."
+        ]
+    elif 180 < glucose <= 250:
+        return [
+            "🥦 Reduce carb-heavy meals, add more veggies & protein.",
+            "🚶‍♂️ Try light activity (walk, stretching).",
+            "❌ Avoid sweets, fried food, soft drinks."
+        ]
+    else:  # Very high
+        return [
+            "⚠️ Blood sugar is very high! Consult doctor if persistent.",
+            "🥗 Strictly avoid high-carb and fried foods.",
+            "💧 Drink water, stay hydrated.",
+            "🧘‍♂️ Rest and monitor closely."
+        ]
 
-  @override
-  Widget build(BuildContext context) {
-    double latestGlucose = glucoseValues.isNotEmpty ? glucoseValues.last : 0.0;
+# ---------------------------
+# File Upload
+# ---------------------------
+uploaded_file = st.file_uploader("📂 Upload your MySugr CSV file", type=["csv"])
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("MySugr AI Coach"),
-        centerTitle: true,
-        elevation: 4,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            ElevatedButton.icon(
-              icon: const Icon(Icons.upload_file),
-              label: const Text("Upload MySugr CSV"),
-              onPressed: _pickCSV,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                textStyle: const TextStyle(fontSize: 16),
-              ),
-            ),
-            const SizedBox(height: 20),
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    df = clean_columns(df)
 
-            if (glucoseValues.isNotEmpty) ...[
-              Text(
-                "Latest Glucose: ${latestGlucose.toStringAsFixed(1)} mg/dL",
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
+    # Ensure required column exists
+    if "Glucose" not in df.columns:
+        st.error("❌ CSV must contain a 'Blood Sugar Measurement (mg/dL)' column.")
+    else:
+        # Handle Date & Time if present
+        if "Date" in df.columns and "Time" in df.columns:
+            df["DateTime"] = pd.to_datetime(df["Date"] + " " + df["Time"], errors="coerce")
+        elif "Date" in df.columns:
+            df["DateTime"] = pd.to_datetime(df["Date"], errors="coerce")
+        else:
+            df["DateTime"] = pd.to_datetime("now")  # fallback if no date
 
-              SizedBox(
-                height: 200,
-                child: LineChart(
-                  LineChartData(
-                    borderData: FlBorderData(show: false),
-                    gridData: FlGridData(show: true),
-                    titlesData: FlTitlesData(show: false),
-                    lineBarsData: [
-                      LineChartBarData(
-                        spots: glucoseValues.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
-                        isCurved: true,
-                        color: Colors.teal,
-                        dotData: FlDotData(show: false),
-                        belowBarData: BarAreaData(show: true, color: Colors.teal.withOpacity(0.3)),
-                      )
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
+        glucose_df = df[["DateTime", "Glucose"]].dropna()
 
-              Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                elevation: 5,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      const Text("💉 Insulin Correction Suggestion",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 10),
-                      Text(
-                        "${insulinNeeded(latestGlucose).toStringAsFixed(1)} units suggested",
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+        # Show summary stats
+        avg_glucose = glucose_df["Glucose"].mean()
+        latest_glucose = glucose_df["Glucose"].iloc[-1]
 
-              const SizedBox(height: 20),
+        st.metric("📊 Average Glucose", f"{avg_glucose:.2f} mg/dL")
+        st.metric("🩸 Latest Glucose", f"{latest_glucose} mg/dL")
 
-              Card(
-                color: Colors.teal.shade50,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                elevation: 3,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    dietSuggestion(latestGlucose),
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
+        # Insulin calculator
+        st.subheader("💉 Insulin Correction Suggestion")
+        correction = insulin_needed(latest_glucose)
+        st.write(f"➡️ Suggested correction dose: **{correction:.2f} units** (based on ISF=14.13)")
+
+        # Diet suggestions
+        st.subheader("🥗 Diet & Lifestyle Suggestions")
+        suggestions = diet_suggestions(latest_glucose)
+        for s in suggestions:
+            st.markdown(f"- {s}")
+
+        # Graphs
+        st.subheader("📈 Glucose Trend Over Time")
+        fig, ax = plt.subplots(figsize=(10,5))
+        sns.lineplot(data=glucose_df, x="DateTime", y="Glucose", marker="o", ax=ax)
+        ax.axhline(150, color="green", linestyle="--", label="Target (150)")
+        ax.axhline(180, color="orange", linestyle="--", label="Upper Normal (180)")
+        ax.axhline(250, color="red", linestyle="--", label="High (250)")
+        ax.set_title("Glucose Levels Over Time")
+        ax.set_ylabel("Glucose (mg/dL)")
+        ax.set_xlabel("Date/Time")
+        ax.legend()
+        st.pyplot(fig)
+
+else:
+    st.info("📂 Please upload your MySugr CSV file to continue.")
