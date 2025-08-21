@@ -111,7 +111,8 @@ with tabs[2]:
 
 # -------------------------
 # -------------------------
-# Diet Recommendations Tab (Interactive Carousel Style)
+# -------------------------
+# Diet Recommendations Tab (Interactive + Randomizer + Nutrition Table)
 # -------------------------
 with tabs[3]:
     st.header("🍎 Diet Recommendations")
@@ -128,11 +129,16 @@ with tabs[3]:
 
                 meals = [
                     {"title": "Glucose Tablets", 
-                     "img": "https://www.diabetes.org/sites/default/files/styles/paragraph_large/public/2023-06/Glucose%20Tablet.jpg"},
+                     "img": "https://www.diabetes.org/sites/default/files/styles/paragraph_large/public/2023-06/Glucose%20Tablet.jpg",
+                     "nutrition": {"Calories": 40, "Carbs": "10g", "Protein": "0g", "Fat": "0g"}},
+                    
                     {"title": "Fruit Juice", 
-                     "img": "https://hips.hearstapps.com/hmg-prod/images/glass-of-orange-juice-royalty-free-image-1628179032.jpg"},
+                     "img": "https://hips.hearstapps.com/hmg-prod/images/glass-of-orange-juice-royalty-free-image-1628179032.jpg",
+                     "nutrition": {"Calories": 120, "Carbs": "28g", "Protein": "2g", "Fat": "0g"}},
+                    
                     {"title": "Balanced Snack (Protein + Carbs)", 
-                     "img": "https://hips.hearstapps.com/hmg-prod/images/protein-snacks-1629407626.jpg"}
+                     "img": "https://hips.hearstapps.com/hmg-prod/images/protein-snacks-1629407626.jpg",
+                     "nutrition": {"Calories": 180, "Carbs": "20g", "Protein": "10g", "Fat": "6g"}}
                 ]
 
             elif 70 <= bs_level <= 140:
@@ -141,11 +147,16 @@ with tabs[3]:
 
                 meals = [
                     {"title": "Balanced Meal Plate", 
-                     "img": "https://www.eatingwell.com/thmb/n0Uu2t91jNVF2nZXuBLDX17jJ_E=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/balanced-meal-plate-4f54077d1aa44c8c8c55c5e67e67432a.jpg"},
+                     "img": "https://www.eatingwell.com/thmb/n0Uu2t91jNVF2nZXuBLDX17jJ_E=/1500x0/...",
+                     "nutrition": {"Calories": 400, "Carbs": "45g", "Protein": "25g", "Fat": "15g"}},
+                    
                     {"title": "Grilled Salmon with Veggies", 
-                     "img": "https://www.eatingwell.com/thmb/2mKZnXZwCkhAXRjWJm7clv1OylE=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/grilled-salmon-vegetables-2000-1a2d17f4b6e94ad7852f04d3a8f44e1a.jpg"},
+                     "img": "https://www.eatingwell.com/thmb/2mKZnXZwCkhAXRjWJm7clv1OylE=/1500x0/...",
+                     "nutrition": {"Calories": 350, "Carbs": "15g", "Protein": "30g", "Fat": "18g"}},
+                    
                     {"title": "Chicken Salad Bowl", 
-                     "img": "https://www.eatingwell.com/thmb/oFz94KfT3RkLRQqgmGBK1bnlT2I=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/chicken-salad-2000-cc6c8b6a5b244cb68f26f373db73a9b5.jpg"}
+                     "img": "https://www.eatingwell.com/thmb/oFz94KfT3RkLRQqgmGBK1bnlT2I=/1500x0/...",
+                     "nutrition": {"Calories": 320, "Carbs": "20g", "Protein": "28g", "Fat": "12g"}}
                 ]
 
             elif 140 < bs_level <= 200:
@@ -154,11 +165,16 @@ with tabs[3]:
 
                 meals = [
                     {"title": "Chicken & Veggie Stir-Fry", 
-                     "img": "https://www.eatingwell.com/thmb/ijWcZcUby6rO-TeHCPhrwQjH4EQ=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/chicken-veggie-stir-fry-2000-91d1e691a2124c10a902a26b5ff1ed7d.jpg"},
+                     "img": "https://www.eatingwell.com/thmb/ijWcZcUby6rO-TeHCPhrwQjH4EQ=/1500x0/...",
+                     "nutrition": {"Calories": 300, "Carbs": "20g", "Protein": "32g", "Fat": "10g"}},
+                    
                     {"title": "Grilled Chicken & Broccoli", 
-                     "img": "https://www.eatingwell.com/thmb/XG7T0YuywJH2mghOb0P7cF3n1uM=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/chicken-broccoli-2000-083993ab2b6a4fc39d3b8a6dfdf3948a.jpg"},
+                     "img": "https://www.eatingwell.com/thmb/XG7T0YuywJH2mghOb0P7cF3n1uM=/1500x0/...",
+                     "nutrition": {"Calories": 280, "Carbs": "15g", "Protein": "30g", "Fat": "8g"}},
+                    
                     {"title": "Zucchini Noodles with Pesto", 
-                     "img": "https://www.eatingwell.com/thmb/nQce9nZftt3VYTrMT9aB7f65h_c=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/zucchini-noodles-2000-1a84f9a8ad454d2287ad7fa1b79d51d0.jpg"}
+                     "img": "https://www.eatingwell.com/thmb/nQce9nZftt3VYTrMT9aB7f65h_c=/1500x0/...",
+                     "nutrition": {"Calories": 260, "Carbs": "12g", "Protein": "15g", "Fat": "16g"}}
                 ]
 
             else:
@@ -167,17 +183,36 @@ with tabs[3]:
 
                 meals = [
                     {"title": "Green Salad & Lean Protein", 
-                     "img": "https://www.eatingwell.com/thmb/o4LJ9Hge6B4xF65Ut9P3XWhM5lc=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/green-salad-2000-0b4741c728074e5a8e9b8fbb1c9f6a0a.jpg"},
+                     "img": "https://www.eatingwell.com/thmb/o4LJ9Hge6B4xF65Ut9P3XWhM5lc=/1500x0/...",
+                     "nutrition": {"Calories": 220, "Carbs": "10g", "Protein": "22g", "Fat": "9g"}},
+                    
                     {"title": "Steamed Veggies & Tofu", 
-                     "img": "https://www.eatingwell.com/thmb/VsBoqKJ2vQ7-2moohsTjqOSClCE=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/steamed-veggies-tofu-2000-9d68dd22d5484ecf85869aa0f2a14c0b.jpg"},
+                     "img": "https://www.eatingwell.com/thmb/VsBoqKJ2vQ7-2moohsTjqOSClCE=/1500x0/...",
+                     "nutrition": {"Calories": 200, "Carbs": "12g", "Protein": "16g", "Fat": "8g"}},
+                    
                     {"title": "Avocado Salad Bowl", 
-                     "img": "https://www.eatingwell.com/thmb/lX2Q5IQ1VYBaN4U5N7DCVmMYrFQ=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/avocado-salad-2000-2a4a7d2e4dbf4a27b7f91d75c05053fa.jpg"}
+                     "img": "https://www.eatingwell.com/thmb/lX2Q5IQ1VYBaN4U5N7DCVmMYrFQ=/1500x0/...",
+                     "nutrition": {"Calories": 240, "Carbs": "14g", "Protein": "8g", "Fat": "18g"}}
                 ]
 
-            # Carousel Simulation
-            choice = st.radio("👉 Choose your recommended meal:", [m["title"] for m in meals])
+            # 🎲 Randomizer Button
+            if st.button("🎲 Surprise Me with a Meal!"):
+                import random
+                meal = random.choice(meals)
+                st.subheader(f"✨ Random Pick: {meal['title']}")
+                st.image(meal["img"], caption=meal["title"], use_container_width=True)
+
+                # ✅ Show nutrition in table
+                st.table(pd.DataFrame(meal["nutrition"], index=[0]))
+
+            # 👉 Carousel Style
+            choice = st.radio("👉 Or pick your meal:", [m["title"] for m in meals])
             meal = next(m for m in meals if m["title"] == choice)
             st.image(meal["img"], caption=meal["title"], use_container_width=True)
 
+            # ✅ Show nutrition in table
+            st.table(pd.DataFrame(meal["nutrition"], index=[0]))
+
     except Exception as e:
         st.error(f"❌ Error in diet recommendation: {e}")
+
