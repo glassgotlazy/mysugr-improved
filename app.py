@@ -109,183 +109,94 @@ with tabs[2]:
     except Exception as e:
         st.error(f"❌ Error in insulin recommendation: {e}")
 
-import streamlit as st
-import pandas as pd
-import plotly.express as px
 import random
+import streamlit as st
 
-# ----------------------------
-# ⚙️ Page Config
-# ----------------------------
-st.set_page_config(page_title="MySugr Improved", layout="wide")
-
-# ----------------------------
-# 📊 Sidebar: File Upload
-# ----------------------------
-st.sidebar.title("📂 Upload Data")
-uploaded_file = st.sidebar.file_uploader("Upload your CSV file", type=["csv"])
-
-# ----------------------------
-# 🥗 Diet Plan Data
-# ----------------------------
-diet_plans = {
+# Meals categorized with nutrition
+meals = {
     "Breakfast": [
-        {"name": "Oats with Fruits", "image": "https://i.imgur.com/8Kh7T4t.jpg",
-         "description": "Fiber-rich oats with fresh fruits for stable sugar.",
-         "nutrition": {"calories": 350, "carbs": 50, "protein": 10, "fat": 5}},
-        {"name": "Vegetable Omelette", "image": "https://i.imgur.com/x5Z4o5Z.jpg",
-         "description": "Egg omelette with spinach, onions, and tomatoes.",
-         "nutrition": {"calories": 280, "carbs": 5, "protein": 18, "fat": 12}},
+        {"name": "Oatmeal with Fruits", 
+         "img": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd",
+         "nutrition": {"Calories": 250, "Protein": 8, "Carbs": 45, "Fat": 5}},
+        {"name": "Avocado Toast", 
+         "img": "https://images.unsplash.com/photo-1551183053-bf91a1d81141",
+         "nutrition": {"Calories": 300, "Protein": 10, "Carbs": 30, "Fat": 12}},
+        {"name": "Smoothie Bowl", 
+         "img": "https://images.unsplash.com/photo-1505253216365-4f5b2b9d5d99",
+         "nutrition": {"Calories": 280, "Protein": 9, "Carbs": 40, "Fat": 7}},
     ],
     "Lunch": [
-        {"name": "Grilled Chicken Salad", "image": "https://i.imgur.com/n3f4uO3.jpg",
-         "description": "High-protein chicken with green veggies.",
-         "nutrition": {"calories": 400, "carbs": 15, "protein": 35, "fat": 10}},
-        {"name": "Quinoa with Vegetables", "image": "https://i.imgur.com/4RkGZLQ.jpg",
-         "description": "Nutritious quinoa with sauteed vegetables.",
-         "nutrition": {"calories": 420, "carbs": 55, "protein": 15, "fat": 8}},
+        {"name": "Grilled Chicken Salad", 
+         "img": "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
+         "nutrition": {"Calories": 400, "Protein": 35, "Carbs": 20, "Fat": 15}},
+        {"name": "Quinoa Bowl", 
+         "img": "https://images.unsplash.com/photo-1604909053369-f06d9f9a1f8e",
+         "nutrition": {"Calories": 420, "Protein": 18, "Carbs": 55, "Fat": 12}},
     ],
     "Dinner": [
-        {"name": "Baked Salmon with Veggies", "image": "https://i.imgur.com/IwlL9Yf.jpg",
-         "description": "Omega-3 rich salmon with steamed vegetables.",
-         "nutrition": {"calories": 500, "carbs": 10, "protein": 40, "fat": 20}},
-        {"name": "Tofu Stir Fry", "image": "https://i.imgur.com/BqZQ0oP.jpg",
-         "description": "Plant protein tofu with colorful bell peppers.",
-         "nutrition": {"calories": 350, "carbs": 20, "protein": 22, "fat": 12}},
+        {"name": "Baked Salmon with Veggies", 
+         "img": "https://images.unsplash.com/photo-1589923188900-3f4e1f3edbe0",
+         "nutrition": {"Calories": 500, "Protein": 40, "Carbs": 25, "Fat": 22}},
+        {"name": "Veggie Stir Fry", 
+         "img": "https://images.unsplash.com/photo-1589927986089-3581237894ef",
+         "nutrition": {"Calories": 350, "Protein": 12, "Carbs": 50, "Fat": 10}},
+    ],
+    "Snack": [
+        {"name": "Greek Yogurt with Honey", 
+         "img": "https://images.unsplash.com/photo-1588361861125-d3a1a0b5e3cb",
+         "nutrition": {"Calories": 180, "Protein": 12, "Carbs": 20, "Fat": 4}},
+        {"name": "Mixed Nuts", 
+         "img": "https://images.unsplash.com/photo-1604908554266-95c0d37db114",
+         "nutrition": {"Calories": 200, "Protein": 6, "Carbs": 8, "Fat": 18}},
     ]
 }
 
-weekly_totals = {}
+days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+categories = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
-# ----------------------------
-# 🧾 Tabs Layout
-# ----------------------------
-tabs = st.tabs(["📊 Dashboard", "📈 Graphs", "🥗 Diet", "💉 Insulin Recommendation"])
+# Rotate through meals
+if "weekly_meals" not in st.session_state:
+    st.session_state.weekly_meals = {}
+    for i, day in enumerate(days):
+        category = categories[i % len(categories)]
+        st.session_state.weekly_meals[day] = random.choice(meals[category])
 
-# ----------------------------
-# 📊 Dashboard Tab
-# ----------------------------
-with tabs[0]:
-    st.header("📊 Dashboard Overview")
+# UI
+st.title("🍽️ Auto-Balanced Weekly Diet Plan")
 
-    if uploaded_file:
-        try:
-            df = pd.read_csv(uploaded_file)
+# Track totals
+weekly_totals = {"Calories": 0, "Protein": 0, "Carbs": 0, "Fat": 0}
 
-            # Ensure lowercase column names
-            df.columns = [c.strip().lower() for c in df.columns]
+for day in days:
+    meal = st.session_state.weekly_meals[day]
+    st.subheader(f"{day} → {meal['name']}")
+    st.image(meal["img"], caption=meal["name"], use_container_width=True)
 
-            st.success("✅ File uploaded successfully!")
-            st.write("### Preview of Data")
-            st.dataframe(df.head())
+    # Nutrition breakdown
+    st.markdown("**📊 Nutrition Breakdown:**")
+    cols = st.columns(4)
+    for i, (k, v) in enumerate(meal["nutrition"].items()):
+        cols[i].metric(k, f"{v}{'g' if k != 'Calories' else ''}")
+        weekly_totals[k] += v
 
-        except Exception as e:
-            st.error(f"❌ Error processing file: {e}")
-    else:
-        st.info("Please upload a CSV file to view your data.")
+    # Replace option
+    if st.button(f"🔄 Change {day}"):
+        for cat, meal_list in meals.items():
+            if meal in meal_list:
+                st.session_state.weekly_meals[day] = random.choice(meal_list)
+        st.rerun()
 
-# ----------------------------
-# 📈 Graphs Tab
-# ----------------------------
-with tabs[1]:
-    st.header("📈 Blood Sugar & Insulin Graphs")
+    # Rating + Notes
+    st.slider(f"⭐ Rate {meal['name']}", 1, 5, 3, key=f"rating_{day}")
+    st.text_area(f"📝 Notes for {meal['name']}", key=f"note_{day}")
+    st.write("---")
 
-    if uploaded_file:
-        try:
-            if "datetime" in df.columns and "blood sugar measurement (mg/dl)" in df.columns:
-                fig = px.line(df, x="datetime", y="blood sugar measurement (mg/dl)",
-                              title="Blood Sugar Over Time")
-                st.plotly_chart(fig, use_container_width=True)
+# Weekly summary
+st.subheader("📅 Weekly Nutrition Summary")
+cols = st.columns(4)
+for i, (k, v) in enumerate(weekly_totals.items()):
+    cols[i].metric(k, f"{v}{'g' if k != 'Calories' else ''}")
 
-            if "datetime" in df.columns and "insulin" in df.columns:
-                fig2 = px.line(df, x="datetime", y="insulin",
-                               title="Insulin Usage Over Time")
-                st.plotly_chart(fig2, use_container_width=True)
-        except Exception as e:
-            st.error(f"❌ Error creating graphs: {e}")
-    else:
-        st.info("Upload a file to generate graphs.")
-
-# ----------------------------
-# 🥗 Diet Tab (Improved)
-# ----------------------------
-with tabs[2]:
-    st.header("🍽️ Personalized Diet Recommendation")
-
-    categories = list(diet_plans.keys())
-    selected_category = st.selectbox("Choose a meal type", categories)
-
-    if selected_category:
-        meals = diet_plans[selected_category]
-        meal = random.choice(meals)
-
-        st.subheader(f"Recommended {selected_category}: {meal['name']}")
-
-        cols = st.columns(2)
-
-        with cols[0]:
-            st.image(meal["image"], use_container_width=True)
-
-        with cols[1]:
-            st.write(meal["description"])
-            st.markdown("**Nutritional Info:**")
-
-            cols2 = st.columns(4)
-            for i, (k, v) in enumerate(meal["nutrition"].items()):
-                key = k.capitalize()
-                if key not in weekly_totals:
-                    weekly_totals[key] = 0
-
-                try:
-                    val = float(v)
-                except Exception:
-                    val = 0
-
-                cols2[i % 4].metric(
-                    key, f"{val}{'g' if key != 'Calories' else ''}"
-                )
-                weekly_totals[key] += val
-
-        st.markdown("---")
-        st.markdown("### ⭐ Rate this Meal")
-        rating = st.radio(
-            "How do you like this meal?",
-            ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"],
-            horizontal=True
-        )
-
-        st.markdown("### 💬 Feedback")
-        feedback = st.text_area("Any comments or suggestions?")
-
-# ----------------------------
-# 💉 Insulin Recommendation Tab
-# ----------------------------
-with tabs[3]:
-    st.header("💉 Insulin Recommendation System")
-
-    current_sugar = st.number_input("Enter current blood sugar level (mg/dL):", min_value=50, max_value=400, value=120)
-    carbs = st.number_input("Enter carbs intake (grams):", min_value=0, max_value=200, value=0)
-    sensitivity = st.slider("Insulin Sensitivity Factor (mg/dL per unit)", 20, 100, 50)
-    carb_ratio = st.slider("Carb Ratio (grams/unit)", 5, 30, 15)
-
-    if st.button("Calculate Recommendation"):
-        correction_dose = max((current_sugar - 120) / sensitivity, 0)
-        carb_dose = carbs / carb_ratio
-        total_dose = round(correction_dose + carb_dose, 1)
-
-        st.success(f"💉 Recommended Insulin Dose: **{total_dose} units**")
-
-        st.info(f"- Correction Dose: {correction_dose:.1f} units")
-        st.info(f"- Carb Coverage Dose: {carb_dose:.1f} units")
-
-# ----------------------------
-# Weekly Nutrition Tracking
-# ----------------------------
-with tabs[3]:
-    st.header("📈 Weekly Nutrition Overview")
-
-    weekly_df = pd.DataFrame([weekly_totals])
-    st.bar_chart(weekly_df.T)
 
 
 import streamlit as st
