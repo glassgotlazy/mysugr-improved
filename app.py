@@ -129,42 +129,45 @@ from datetime import datetime
 import random
 import streamlit as st
 
+import random
+import streamlit as st
+
 # Meals categorized with nutrition
 meals = {
     "Breakfast": [
         {"name": "Oatmeal with Fruits", 
          "img": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd",
-         "nutrition": {"Calories": 250, "Protein": "8g", "Carbs": "45g", "Fat": "5g"}},
+         "nutrition": {"Calories": 250, "Protein": 8, "Carbs": 45, "Fat": 5}},
         {"name": "Avocado Toast", 
          "img": "https://images.unsplash.com/photo-1551183053-bf91a1d81141",
-         "nutrition": {"Calories": 300, "Protein": "10g", "Carbs": "30g", "Fat": "12g"}},
+         "nutrition": {"Calories": 300, "Protein": 10, "Carbs": 30, "Fat": 12}},
         {"name": "Smoothie Bowl", 
          "img": "https://images.unsplash.com/photo-1505253216365-4f5b2b9d5d99",
-         "nutrition": {"Calories": 280, "Protein": "9g", "Carbs": "40g", "Fat": "7g"}},
+         "nutrition": {"Calories": 280, "Protein": 9, "Carbs": 40, "Fat": 7}},
     ],
     "Lunch": [
         {"name": "Grilled Chicken Salad", 
          "img": "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
-         "nutrition": {"Calories": 400, "Protein": "35g", "Carbs": "20g", "Fat": "15g"}},
+         "nutrition": {"Calories": 400, "Protein": 35, "Carbs": 20, "Fat": 15}},
         {"name": "Quinoa Bowl", 
          "img": "https://images.unsplash.com/photo-1604909053369-f06d9f9a1f8e",
-         "nutrition": {"Calories": 420, "Protein": "18g", "Carbs": "55g", "Fat": "12g"}},
+         "nutrition": {"Calories": 420, "Protein": 18, "Carbs": 55, "Fat": 12}},
     ],
     "Dinner": [
         {"name": "Baked Salmon with Veggies", 
          "img": "https://images.unsplash.com/photo-1589923188900-3f4e1f3edbe0",
-         "nutrition": {"Calories": 500, "Protein": "40g", "Carbs": "25g", "Fat": "22g"}},
+         "nutrition": {"Calories": 500, "Protein": 40, "Carbs": 25, "Fat": 22}},
         {"name": "Veggie Stir Fry", 
          "img": "https://images.unsplash.com/photo-1589927986089-3581237894ef",
-         "nutrition": {"Calories": 350, "Protein": "12g", "Carbs": "50g", "Fat": "10g"}},
+         "nutrition": {"Calories": 350, "Protein": 12, "Carbs": 50, "Fat": 10}},
     ],
     "Snack": [
         {"name": "Greek Yogurt with Honey", 
          "img": "https://images.unsplash.com/photo-1588361861125-d3a1a0b5e3cb",
-         "nutrition": {"Calories": 180, "Protein": "12g", "Carbs": "20g", "Fat": "4g"}},
+         "nutrition": {"Calories": 180, "Protein": 12, "Carbs": 20, "Fat": 4}},
         {"name": "Mixed Nuts", 
          "img": "https://images.unsplash.com/photo-1604908554266-95c0d37db114",
-         "nutrition": {"Calories": 200, "Protein": "6g", "Carbs": "8g", "Fat": "18g"}},
+         "nutrition": {"Calories": 200, "Protein": 6, "Carbs": 8, "Fat": 18}},
     ]
 }
 
@@ -181,6 +184,9 @@ if "weekly_meals" not in st.session_state:
 # UI
 st.title("🍽️ Auto-Balanced Weekly Diet Plan")
 
+# Track weekly totals
+weekly_totals = {"Calories": 0, "Protein": 0, "Carbs": 0, "Fat": 0}
+
 for day in days:
     meal = st.session_state.weekly_meals[day]
     st.subheader(f"{day} → {meal['name']}")
@@ -190,7 +196,10 @@ for day in days:
     st.markdown("**📊 Nutrition Breakdown:**")
     cols = st.columns(4)
     for i, (k, v) in enumerate(meal["nutrition"].items()):
-        cols[i].metric(k, v)
+        cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
+
+        # Add to weekly totals
+        weekly_totals[k] += v
 
     # Replace option
     if st.button(f"🔄 Change {day}"):
@@ -203,6 +212,13 @@ for day in days:
     st.slider(f"⭐ Rate {meal['name']}", 1, 5, 3, key=f"rating_{day}")
     st.text_area(f"📝 Notes for {meal['name']}", key=f"note_{day}")
     st.write("---")
+
+# 📊 Weekly Summary
+st.subheader("📅 Weekly Nutrition Summary")
+summary_cols = st.columns(4)
+for i, (k, v) in enumerate(weekly_totals.items()):
+    summary_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
+
 
 # ----------------------
 # Diet History Tab
