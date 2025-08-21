@@ -185,55 +185,50 @@ if "weekly_meals" not in st.session_state:
 st.title("🍽️ Auto-Balanced Weekly Diet Plan")
 
 # Track weekly totals
-weekly_totals = {"Calories": 0, "Protein": 0, "Carbs": 0, "Fat": 0}
+# 🍽️ Diet Recommendation Tab
+with tabs[2]:
+    st.header("🍽️ Personalized Diet Recommendation")
 
-for day in days:
-    meal = st.session_state.weekly_meals[day]
-    st.subheader(f"{day} → {meal['name']}")
-    st.image(meal["img"], caption=meal["name"], use_container_width=True)
-# Nutrition breakdown
-st.markdown("**📊 Nutrition Breakdown:**")
-cols = st.columns(4)
+    categories = list(diet_plans.keys())
+    selected_category = st.selectbox("Choose a meal type", categories)
 
-for i, (k, v) in enumerate(meal["nutrition"].items()):
-    # Standardize key names
-    key = k.capitalize()
-    if key not in weekly_totals:
-        weekly_totals[key] = 0
+    if selected_category:
+        meals = diet_plans[selected_category]
+        meal = random.choice(meals)
 
-    try:
-        val = float(v)  # Convert to number
-    except Exception:
-        val = 0
+        st.subheader(f"Recommended {selected_category}: {meal['name']}")
 
-    cols[i].metric(key, f"{val}{'g' if key != 'Calories' else ''}")
-    weekly_totals[key] += val
+        cols = st.columns(2)
+        with cols[0]:
+            st.image(meal["image"], use_container_width=True)
+        with cols[1]:
+            st.write(meal["description"])
+            st.markdown("**Nutritional Info:**")
 
+            cols2 = st.columns(4)
+            for i, (k, v) in enumerate(meal["nutrition"].items()):
+                key = k.capitalize()
+                if key not in weekly_totals:
+                    weekly_totals[key] = 0
 
+                try:
+                    val = float(v)
+                except Exception:
+                    val = 0
 
-    cols[i].metric(key, f"{val}{'g' if key != 'Calories' else ''}")
-    weekly_totals[key] += val
+                cols2[i % 4].metric(
+                    key, f"{val}{'g' if key != 'Calories' else ''}"
+                )
+                weekly_totals[key] += val
 
+        st.markdown("### ⭐ Rate this Recommendation")
+        rating = st.radio(
+            "How do you like this meal?",
+            ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"],
+            horizontal=True
+        )
+        feedback = st.text_area("💬 Any feedback on this meal?")
 
-        # Ensure numeric value
-        try:
-            val = float(str(v).replace("g", "").replace("kcal", "").strip())
-        except:
-            val = 0
-
-        # Show metric
-        unit = "g" if key != "Calories" else "kcal"
-        cols[i].metric(key, f"{val}{unit}")
-
-        # Add to weekly totals
-        weekly_totals[key] += val
-
-    # Replace option
-    if st.button(f"🔄 Change {day}"):
-        for cat, meal_list in meals.items():
-            if meal in meal_list:
-                st.session_state.weekly_meals[day] = random.choice(meal_list)
-        st.rerun()
 
     # Rating + Notes
     st.slider(f"⭐ Rate {meal['name']}", 1, 5, 3, key=f"rating_{day}")
