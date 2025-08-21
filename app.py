@@ -46,7 +46,7 @@ if uploaded_file is not None:
             df = df.sort_values(by=datetime_col)
             df = df.rename(columns={datetime_col: "DateTime", glucose_col: "Glucose"})
 
-            # Show summary
+            # Show summary 
             st.subheader("📊 Data Summary")
             st.write(df.describe())
 
