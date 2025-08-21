@@ -26,7 +26,7 @@ st.set_page_config(page_title="MySugr Dashboard", page_icon="💉", layout="wide
 st.markdown("""
 <style>
 :root{
-  --brand:#0a84ff; --ink:#0f172a; --muted:#64748b; --card:#f8fafc; --ring:#e2e8f0;
+  --brand:#0a84ff; --ink:#0f172a; --muted:#64748b; --card:#00e6e6; --ring:#e2e8f0;
 }
 .block-container{padding-top:1rem;}
 h1,h2,h3{color:var(--ink); letter-spacing:-0.02em;}
@@ -40,7 +40,7 @@ h1,h2,h3{color:var(--ink); letter-spacing:-0.02em;}
 .badge{display:inline-block; padding:4px 10px; border-radius:999px; border:1px solid var(--ring); background:#ff5050; font-size:0.85rem;}
 .hr{height:1px; background:var(--ring); margin:8px 0 16px;}
 .stTabs [data-baseweb="tab-list"] { gap: 6px; }
-.stTabs [data-baseweb="tab"] { background: #fff; border:1px solid var(--ring); border-radius:12px; padding:8px 12px; }
+.stTabs [data-baseweb="tab"] { background: #00e6e6; border:1px solid var(--ring); border-radius:12px; padding:8px 12px; }
 </style>
 """, unsafe_allow_html=True)
 
