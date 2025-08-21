@@ -199,6 +199,23 @@ with tabs[2]:
         st.subheader(f"Recommended {selected_category}: {meal['name']}")
 
         cols = st.columns(2)
+        with cols[0]:?
+            # 🍽️ Diet Recommendation Tab
+with tabs[2]:
+    st.header("🍽️ Personalized Diet Recommendation")
+
+    # Pick meal type
+    categories = list(diet_plans.keys())
+    selected_category = st.selectbox("Choose a meal type", categories)
+
+    if selected_category:
+        meals = diet_plans[selected_category]
+        meal = random.choice(meals)
+
+        # Show meal recommendation
+        st.subheader(f"Recommended {selected_category}: {meal['name']}")
+
+        cols = st.columns(2)
         with cols[0]:
             st.image(meal["image"], use_container_width=True)
         with cols[1]:
@@ -216,18 +233,25 @@ with tabs[2]:
                 except Exception:
                     val = 0
 
+                # Show nutrition metric
                 cols2[i % 4].metric(
                     key, f"{val}{'g' if key != 'Calories' else ''}"
                 )
+
+                # Add to weekly totals
                 weekly_totals[key] += val
 
-        st.markdown("### ⭐ Rate this Recommendation")
+        st.markdown("---")
+        st.markdown("### ⭐ Rate this Meal")
         rating = st.radio(
             "How do you like this meal?",
             ["⭐", "⭐⭐", "⭐⭐⭐", "⭐⭐⭐⭐", "⭐⭐⭐⭐⭐"],
             horizontal=True
         )
-        feedback = st.text_area("💬 Any feedback on this meal?")
+
+        st.markdown("### 💬 Feedback")
+        feedback = st.text_area("Any comments or suggestions?")
+
 
 
     # Rating + Notes
