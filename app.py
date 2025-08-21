@@ -115,7 +115,7 @@ if uploaded_file:
         insulin_followed = st.checkbox("Insulin taken as prescribed?", key="insulin_check")
         insulin_note = st.text_input("If not, what insulin routine was followed?", key="insulin_note") if not insulin_followed else None
 
-    # --- Tab 4: Report ---
+    # --- Tab 4: Report --
     with tab4:
         st.subheader("📄 Export Report")
         if st.button("Generate PDF Report"):
