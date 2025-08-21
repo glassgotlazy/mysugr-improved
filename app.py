@@ -192,14 +192,17 @@ for day in days:
     st.subheader(f"{day} → {meal['name']}")
     st.image(meal["img"], caption=meal["name"], use_container_width=True)
 
-    # Nutrition breakdown
+      # Nutrition breakdown
     st.markdown("**📊 Nutrition Breakdown:**")
     cols = st.columns(4)
     for i, (k, v) in enumerate(meal["nutrition"].items()):
-        cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
+        # Standardize key names
+        key = k.capitalize()
+        if key not in weekly_totals:
+            weekly_totals[key] = 0
+        cols[i].metric(key, f"{v}{'g' if key != 'Calories' else ''}")
+        weekly_totals[key] += v
 
-        # Add to weekly totals
-        weekly_totals[k] += v
 
     # Replace option
     if st.button(f"🔄 Change {day}"):
