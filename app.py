@@ -18,21 +18,21 @@ st.set_page_config(page_title="MySugr Dashboard", page_icon="💉", layout="wide
 st.markdown("""
 <style>
 /* Soft modern look */
-:root { --card-bg: #f7fbff; --accent: #1976d2; }
+:root { --card-bg: #f7fbff; --accent: #b3602d; }
 .block-container { padding-top: 1.2rem; }
 h1, h2, h3 { color: var(--accent); }
 .metric-card{
-  background: linear-gradient(135deg, #eef7ff, #fafdff);
+  background: linear-gradient(135deg, #709615, #fafdff);
   border: 1px solid #e5eef8; border-radius: 18px; padding: 18px;
   box-shadow: 0 4px 14px rgba(10,30,60,0.06);
 }
 .diet-card{
-  background: linear-gradient(135deg, #fff0f4, #fff7fb);
+  background: linear-gradient(135deg, #3dcc91, #fff7fb);
   border: 1px solid #fde1eb; border-radius: 18px; padding: 24px;
   box-shadow: 0 8px 18px rgba(200,0,80,0.08);
 }
 .big-number{ font-size: 26px; font-weight: 700; }
-.subtle{ color:#4b5b6a; }
+.subtle{ color:#141414; }
 </style>
 """, unsafe_allow_html=True)
 
