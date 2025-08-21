@@ -181,16 +181,17 @@ if "weekly_meals" not in st.session_state:
         category = categories[i % len(categories)]
         st.session_state.weekly_meals[day] = random.choice(meals[category])
 
+# ✅ Initialize weekly nutrition totals
+if "weekly_totals" not in st.session_state:
+    st.session_state.weekly_totals = {"Calories": 0, "Protein": 0, "Carbs": 0, "Fats": 0}
+
+weekly_totals = st.session_state.weekly_totals
+
 # 🍽️ Diet Recommendation Tab
 with tabs[2]:
     st.header("🍽️ Personalized Diet Recommendation")
 
-    # Initialize weekly totals in session state
-    if "weekly_totals" not in st.session_state:
-        st.session_state.weekly_totals = {}
-    weekly_totals = st.session_state.weekly_totals
-
-    # Meal categories
+    # Pick meal type from diet_plans
     categories = list(diet_plans.keys())
     selected_category = st.selectbox("Choose a meal type", categories)
 
@@ -216,18 +217,21 @@ with tabs[2]:
             for i, (k, v) in enumerate(meal["nutrition"].items()):
                 key = k.capitalize()
 
-                # Safely convert nutrition values
+                # Ensure the nutrient exists in weekly_totals
+                if key not in weekly_totals:
+                    weekly_totals[key] = 0
+
                 try:
                     val = float(v)
                 except Exception:
                     val = 0
 
-                # Display metric
-                cols2[i % 4].metric(key, f"{val}{'g' if key != 'Calories' else ''}")
+                # Show nutrition metric
+                cols2[i % 4].metric(
+                    key, f"{val}{'g' if key != 'Calories' else ''}"
+                )
 
-                # Update weekly totals
-                if key not in weekly_totals:
-                    weekly_totals[key] = 0
+                # Add to weekly totals
                 weekly_totals[key] += val
 
         st.markdown("---")
@@ -241,12 +245,13 @@ with tabs[2]:
         st.markdown("### 💬 Feedback")
         feedback = st.text_area("Any comments or suggestions?")
 
-        # ✅ Weekly nutrition summary
         st.markdown("---")
         st.subheader("📊 Weekly Nutrition Summary")
         cols3 = st.columns(4)
         for i, (k, v) in enumerate(weekly_totals.items()):
-            cols3[i % 4].metric(k, f"{round(v, 1)}{'g' if k != 'Calories' else ''}")
+            cols3[i % 4].metric(
+                k, f"{round(v,1)}{'g' if k != 'Calories' else ''}"
+            )
 
 
 
