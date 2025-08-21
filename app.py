@@ -20,16 +20,16 @@ st.markdown("""
 <style>
     body { background-color: #f5f7fa; }
     .metric-card {
-        background: linear-gradient(135deg, #f0f9ff, #cbebff);
+        background: linear-gradient(135deg, #6e2e42, #cbebff);
         padding: 20px; border-radius: 16px; text-align: center;
         box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 15px;
     }
     .diet-card {
-        background: linear-gradient(135deg, #fff0f5, #ffe6f0);
+        background: linear-gradient(135deg, #1e942f, #ffe6f0);
         padding: 28px; border-radius: 18px; text-align: center;
         box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 20px 0;
     }
-    .diet-card h2 { font-size: 28px; color: #b30047; margin-bottom: 12px; }
+    .diet-card h2 { font-size: 28px; color: #b3602d; margin-bottom: 12px; }
     .diet-card p  { font-size: 20px; font-weight: 500; line-height: 1.55; }
     h1 { color: #0066cc; text-align: center; font-weight: 700; }
     h2 { color: #004d99; margin-top: 24px; }
