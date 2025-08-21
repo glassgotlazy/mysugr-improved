@@ -56,8 +56,28 @@ if uploaded_file:
     # --- Tab 1: Blood Sugar ---
     with tab1:
         st.subheader("📈 Blood Sugar Trend")
+
+        # Filter: Date Range
+        min_date, max_date = df["datetime"].min(), df["datetime"].max()
+        start_date, end_date = st.date_input("📅 Select Date Range", [min_date, max_date])
+        mask = (df["datetime"].dt.date >= start_date) & (df["datetime"].dt.date <= end_date)
+        filtered_df = df[mask]
+
+        # Filter: Time of Day
+        time_filter = st.selectbox("🕒 Select Time of Day", ["All", "Morning", "Afternoon", "Evening", "Night"])
+        if time_filter != "All":
+            hours = {
+                "Morning": (5, 12),
+                "Afternoon": (12, 17),
+                "Evening": (17, 21),
+                "Night": (21, 24)
+            }
+            h1, h2 = hours[time_filter]
+            filtered_df = filtered_df[(filtered_df["datetime"].dt.hour >= h1) & (filtered_df["datetime"].dt.hour < h2)]
+
+        # Plot
         fig, ax = plt.subplots(figsize=(8,4))
-        ax.plot(df["datetime"], df[sugar_col], marker="o", linestyle="-", color="red", label="Blood Sugar")
+        ax.plot(filtered_df["datetime"], filtered_df[sugar_col], marker="o", linestyle="-", color="red", label="Blood Sugar")
         ax.set_xlabel("Date")
         ax.set_ylabel("mg/dL")
         ax.legend()
@@ -66,9 +86,20 @@ if uploaded_file:
     # --- Tab 2: Insulin ---
     with tab2:
         st.subheader("💉 Insulin Trend")
+
+        # Filter: Date Range
+        min_date, max_date = df["datetime"].min(), df["datetime"].max()
+        start_date, end_date = st.date_input("📅 Select Date Range for Insulin", [min_date, max_date], key="insulin_dates")
+        mask = (df["datetime"].dt.date >= start_date) & (df["datetime"].dt.date <= end_date)
+        insulin_df = df[mask]
+
+        # Filter: Insulin Types
+        selected_insulins = st.multiselect("💉 Select Insulin Types", insulin_cols, default=insulin_cols)
+
+        # Plot
         fig, ax = plt.subplots(figsize=(8,4))
-        for col in insulin_cols:
-            ax.plot(df["datetime"], df[col], marker="o", linestyle="--", label=col)
+        for col in selected_insulins:
+            ax.plot(insulin_df["datetime"], insulin_df[col], marker="o", linestyle="--", label=col)
         ax.set_xlabel("Date")
         ax.set_ylabel("Units")
         ax.legend()
@@ -95,8 +126,8 @@ if uploaded_file:
 
             content.append(Paragraph("MySugar Report", styles['Title']))
             content.append(Spacer(1, 12))
-            content.append(Paragraph(f"Average Blood Sugar: {df[sugar_col].mean():.1f} mg/dL", styles['Normal']))
-            content.append(Paragraph(f"Total Insulin: {df[insulin_cols].sum().sum():.1f} units", styles['Normal']))
+            content.append(Paragraph(f"Average Blood Sugar: {filtered_df[sugar_col].mean():.1f} mg/dL", styles['Normal']))
+            content.append(Paragraph(f"Total Insulin: {df[selected_insulins].sum().sum():.1f} units", styles['Normal']))
             content.append(Spacer(1, 12))
 
             if not diet_followed:
