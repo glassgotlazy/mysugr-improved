@@ -1,100 +1,75 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 from datetime import datetime
 
-# -------------------------------
-# Helper functions
-# -------------------------------
-def insulin_needed(current_glucose, target_glucose=150, isf=14.13):
-    """Calculate insulin correction dose."""
-    if current_glucose <= target_glucose:
-        return 0.0
-    return round((current_glucose - target_glucose) / isf, 2)
+st.set_page_config(page_title="MySugr Improved", page_icon="💉", layout="wide")
 
+st.title("💉 MySugr Improved – Blood Sugar Tracker")
 
-def diet_suggestions(glucose):
-    """Return diet & lifestyle suggestions based on glucose level."""
-    if glucose < 70:
-        return "⚠️ Low sugar detected! Have a small snack (fruit juice, glucose tablet). Avoid excess insulin."
-    elif 70 <= glucose <= 180:
-        return "✅ Excellent! Maintain your balanced diet and regular exercise."
-    elif 180 < glucose <= 250:
-        return "⚠️ Elevated sugar. Prefer high-fiber foods (veggies, whole grains) and hydrate well."
-    else:
-        return "🚨 High sugar detected! Avoid carbs/sugary foods. Consult your doctor if persistent."
+# File uploader
+uploaded_file = st.file_uploader("📂 Upload your blood sugar CSV file", type=["csv"])
 
-
-# -------------------------------
-# Streamlit UI
-# -------------------------------
-st.set_page_config(page_title="MySugr Improved", layout="wide")
-
-st.title("🩸 MySugr Improved – Glucose & Insulin Tracker")
-
-st.sidebar.header("📂 Upload Your Data")
-uploaded_file = st.sidebar.file_uploader("Upload CSV", type=["csv"])
-
-# Example expected columns
-st.sidebar.markdown(
-    "Your CSV must have columns: **DateTime**, **Blood Sugar Measurement (mg/dL)**"
-)
-
-# If file is uploaded
-if uploaded_file:
+if uploaded_file is not None:
     try:
         df = pd.read_csv(uploaded_file)
 
-        # Normalize column names
-        df.columns = df.columns.str.strip()
+        st.success("✅ File uploaded successfully!")
+        st.write("Here’s a preview of your data:")
+        st.dataframe(df.head())
 
-        # Check required columns
-        if not {"DateTime", "Blood Sugar Measurement (mg/dL)"}.issubset(df.columns):
-            st.error("❌ CSV must contain 'DateTime' and 'Blood Sugar Measurement (mg/dL)' columns.")
-        else:
-            # Convert datetime
-            df["DateTime"] = pd.to_datetime(df["DateTime"], errors="coerce")
-            df = df.dropna(subset=["DateTime"])
+        # Normalize column names (strip spaces + lowercase)
+        df.columns = df.columns.str.strip().str.lower()
 
-            st.success("✅ Data loaded successfully!")
+        # Try to auto-detect columns
+        datetime_col = None
+        glucose_col = None
 
-            # Show preview
-            st.subheader("📊 Uploaded Data Preview")
-            st.dataframe(df.head())
+        for col in df.columns:
+            if "date" in col or "time" in col:
+                datetime_col = col
+            if "glucose" in col or "sugar" in col:
+                glucose_col = col
 
-            # Plot glucose readings
-            st.subheader("📈 Glucose Levels Over Time")
-            fig, ax = plt.subplots(figsize=(10, 4))
-            sns.lineplot(data=df, x="DateTime", y="Blood Sugar Measurement (mg/dL)", marker="o", ax=ax)
-            ax.axhline(150, color="green", linestyle="--", label="Target (150)")
-            ax.set_ylabel("Blood Sugar (mg/dL)")
-            ax.legend()
-            st.pyplot(fig)
+        # If not detected, ask user to select
+        if datetime_col is None or glucose_col is None:
+            st.warning("⚠️ Couldn’t auto-detect the right columns. Please select them manually.")
+            datetime_col = st.selectbox("Select Date/Time column", df.columns)
+            glucose_col = st.selectbox("Select Glucose column", df.columns)
 
-            # Select a row
-            st.subheader("📌 Pick a reading for analysis")
-            selected_row = st.selectbox(
-                "Select by DateTime & Value",
-                options=df.itertuples(index=False),
-                format_func=lambda x: f"{x.DateTime.strftime('%Y-%m-%d %H:%M')} → {x[1]} mg/dL",
-            )
+        # Convert datetime column
+        df[datetime_col] = pd.to_datetime(df[datetime_col], errors="coerce")
+        df = df.dropna(subset=[datetime_col, glucose_col])
+        df = df.sort_values(by=datetime_col)
 
-            if selected_row:
-                glucose_val = selected_row[1]
+        # Rename for consistency
+        df = df.rename(columns={datetime_col: "DateTime", glucose_col: "Glucose"})
 
-                st.metric("📍 Selected Reading", f"{glucose_val} mg/dL")
+        # Show summary
+        st.subheader("📊 Data Summary")
+        st.write(df.describe())
 
-                # Insulin suggestion
-                insulin_units = insulin_needed(glucose_val)
-                st.subheader("💉 Insulin Recommendation")
-                st.write(f"Suggested correction dose: **{insulin_units} units**")
+        # Plot
+        st.subheader("📈 Blood Sugar Trend")
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.plot(df["DateTime"], df["Glucose"], marker="o", linestyle="-", color="teal")
+        ax.axhline(140, color="red", linestyle="--", label="High (140 mg/dL)")
+        ax.axhline(70, color="orange", linestyle="--", label="Low (70 mg/dL)")
+        ax.set_ylabel("Glucose (mg/dL)")
+        ax.set_xlabel("Date & Time")
+        ax.legend()
+        st.pyplot(fig)
 
-                # Diet suggestion
-                st.subheader("🥗 Diet & Lifestyle Suggestion")
-                st.info(diet_suggestions(glucose_val))
+        # Latest reading
+        latest = df.iloc[-1]
+        st.metric(
+            label="Latest Reading",
+            value=f"{latest['Glucose']} mg/dL",
+            delta=f"{(latest['Glucose'] - df['Glucose'].mean()):.1f} vs avg",
+        )
 
     except Exception as e:
-        st.error(f"Error reading file: {e}")
+        st.error(f"❌ Error processing file: {e}")
+
 else:
-    st.warning("👆 Upload your CSV file to begin.")
+    st.info("👆 Please upload a CSV file to continue.")
