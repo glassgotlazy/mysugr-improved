@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from datetime import datetime
 
 # ---------------------------
 # App Config
@@ -10,8 +9,7 @@ from datetime import datetime
 st.set_page_config(
     page_title="MySugr AI Diabetes Assistant",
     page_icon="🩸",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
 st.title("🩸 MySugr AI Diabetes Assistant")
@@ -21,7 +19,6 @@ st.markdown("Upload your **MySugr CSV file** and get personalized insights, insu
 # Helper Functions
 # ---------------------------
 def clean_columns(df):
-    """Rename columns to standard names if needed"""
     col_map = {
         'Date': 'Date',
         'Time': 'Time',
@@ -29,39 +26,36 @@ def clean_columns(df):
         'Blood Sugar': 'Glucose',
         'Glucose': 'Glucose'
     }
-    df = df.rename(columns={c: col_map[c] for c in df.columns if c in col_map})
-    return df
+    return df.rename(columns={c: col_map[c] for c in df.columns if c in col_map})
 
 def insulin_needed(current_glucose, target_glucose=150, isf=14.13):
-    """Correction dose calculator"""
     if current_glucose <= target_glucose:
         return 0.0
     return (current_glucose - target_glucose) / isf
 
 def diet_suggestions(glucose):
-    """Rule-based diet suggestions"""
     if glucose < 70:
         return [
-            "🍯 Eat fast-acting carbs (like glucose tablets, juice).",
-            "🍌 Follow up with a balanced snack (fruit + protein).",
+            "🍯 Eat fast-acting carbs (glucose tablets, juice).",
+            "🍌 Follow up with fruit + protein snack.",
             "⏱️ Recheck sugar in 15 mins."
         ]
     elif 70 <= glucose <= 180:
         return [
-            "🥗 Continue with a balanced diet (veggies, lean protein, whole grains).",
-            "🚶‍♂️ Light walk after meals helps maintain stability.",
-            "💧 Stay hydrated (water > sugary drinks)."
+            "🥗 Balanced diet: veggies, lean protein, whole grains.",
+            "🚶‍♂️ Light walk after meals.",
+            "💧 Drink water instead of sugary drinks."
         ]
     elif 180 < glucose <= 250:
         return [
-            "🥦 Reduce carb-heavy meals, add more veggies & protein.",
-            "🚶‍♂️ Try light activity (walk, stretching).",
-            "❌ Avoid sweets, fried food, soft drinks."
+            "🥦 Reduce carbs, add more protein/veggies.",
+            "🚶‍♂️ Light activity recommended.",
+            "❌ Avoid sweets, fried food, soda."
         ]
-    else:  # Very high
+    else:
         return [
-            "⚠️ Blood sugar is very high! Consult doctor if persistent.",
-            "🥗 Strictly avoid high-carb and fried foods.",
+            "⚠️ Very high sugar! Consult doctor if persistent.",
+            "🥗 Strictly avoid carbs & fried foods.",
             "💧 Drink water, stay hydrated.",
             "🧘‍♂️ Rest and monitor closely."
         ]
@@ -76,7 +70,7 @@ if uploaded_file is not None:
     df = clean_columns(df)
 
     if "Glucose" not in df.columns:
-        st.error("❌ CSV must contain a 'Blood Sugar Measurement (mg/dL)' column.")
+        st.error("❌ CSV must contain 'Blood Sugar Measurement (mg/dL)' or 'Glucose' column.")
     else:
         if "Date" in df.columns and "Time" in df.columns:
             df["DateTime"] = pd.to_datetime(df["Date"] + " " + df["Time"], errors="coerce")
@@ -95,11 +89,10 @@ if uploaded_file is not None:
 
         st.subheader("💉 Insulin Correction Suggestion")
         correction = insulin_needed(latest_glucose)
-        st.write(f"➡️ Suggested correction dose: **{correction:.2f} units** (based on ISF=14.13)")
+        st.write(f"➡️ Suggested correction dose: **{correction:.2f} units**")
 
         st.subheader("🥗 Diet & Lifestyle Suggestions")
-        suggestions = diet_suggestions(latest_glucose)
-        for s in suggestions:
+        for s in diet_suggestions(latest_glucose):
             st.markdown(f"- {s}")
 
         st.subheader("📈 Glucose Trend Over Time")
