@@ -75,39 +75,33 @@ if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     df = clean_columns(df)
 
-    # Ensure required column exists
     if "Glucose" not in df.columns:
         st.error("❌ CSV must contain a 'Blood Sugar Measurement (mg/dL)' column.")
     else:
-        # Handle Date & Time if present
         if "Date" in df.columns and "Time" in df.columns:
             df["DateTime"] = pd.to_datetime(df["Date"] + " " + df["Time"], errors="coerce")
         elif "Date" in df.columns:
             df["DateTime"] = pd.to_datetime(df["Date"], errors="coerce")
         else:
-            df["DateTime"] = pd.to_datetime("now")  # fallback if no date
+            df["DateTime"] = pd.to_datetime("now")
 
         glucose_df = df[["DateTime", "Glucose"]].dropna()
 
-        # Show summary stats
         avg_glucose = glucose_df["Glucose"].mean()
         latest_glucose = glucose_df["Glucose"].iloc[-1]
 
         st.metric("📊 Average Glucose", f"{avg_glucose:.2f} mg/dL")
         st.metric("🩸 Latest Glucose", f"{latest_glucose} mg/dL")
 
-        # Insulin calculator
         st.subheader("💉 Insulin Correction Suggestion")
         correction = insulin_needed(latest_glucose)
         st.write(f"➡️ Suggested correction dose: **{correction:.2f} units** (based on ISF=14.13)")
 
-        # Diet suggestions
         st.subheader("🥗 Diet & Lifestyle Suggestions")
         suggestions = diet_suggestions(latest_glucose)
         for s in suggestions:
             st.markdown(f"- {s}")
 
-        # Graphs
         st.subheader("📈 Glucose Trend Over Time")
         fig, ax = plt.subplots(figsize=(10,5))
         sns.lineplot(data=glucose_df, x="DateTime", y="Glucose", marker="o", ax=ax)
