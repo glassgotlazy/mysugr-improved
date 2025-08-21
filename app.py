@@ -185,61 +185,50 @@ if "weekly_meals" not in st.session_state:
 with tabs[2]:
     st.header("🍽️ Personalized Diet Recommendation")
 
-    try:
-        # Pick meal type
-        categories = list(diet_plans.keys())
-        selected_category = st.selectbox("Choose a meal type", categories)
+    # Initialize weekly totals in session state
+    if "weekly_totals" not in st.session_state:
+        st.session_state.weekly_totals = {}
+    weekly_totals = st.session_state.weekly_totals
 
-        if selected_category:
-            meals = diet_plans[selected_category]
+    # Meal categories
+    categories = list(diet_plans.keys())
+    selected_category = st.selectbox("Choose a meal type", categories)
 
-            try:
-                meal = random.choice(meals)
-            except Exception as e:
-                st.error(f"⚠️ Could not select a meal: {e}")
-                meal = None
+    if selected_category:
+        meals = diet_plans[selected_category]
+        meal = random.choice(meals)
 
-            if meal:
-                # Show meal recommendation
-                st.subheader(f"Recommended {selected_category}: {meal.get('name', 'Unknown')}")
+        # Show meal recommendation
+        st.subheader(f"Recommended {selected_category}: {meal['name']}")
 
-                cols = st.columns(2)
+        cols = st.columns(2)
 
-                # Meal image
-                with cols[0]:
-                    try:
-                        if "image" in meal and meal["image"]:
-                            st.image(meal["image"], use_container_width=True)
-                        else:
-                            st.warning("⚠️ No image available for this meal.")
-                    except Exception as e:
-                        st.error(f"⚠️ Error loading image: {e}")
+        # Meal image
+        with cols[0]:
+            st.image(meal["image"], use_container_width=True)
 
-                # Meal details + nutrition
-                with cols[1]:
-                    st.write(meal.get("description", "No description available"))
-                    st.markdown("**Nutritional Info:**")
+        # Meal details + nutrition
+        with cols[1]:
+            st.write(meal["description"])
+            st.markdown("**Nutritional Info:**")
 
-                    cols2 = st.columns(4)
+            cols2 = st.columns(4)
+            for i, (k, v) in enumerate(meal["nutrition"].items()):
+                key = k.capitalize()
 
-                    if "nutrition" in meal:
-                        for i, (k, v) in enumerate(meal["nutrition"].items()):
-                            key = k.capitalize()
-                            if key not in weekly_totals:
-                                weekly_totals[key] = 0
+                # Safely convert nutrition values
+                try:
+                    val = float(v)
+                except Exception:
+                    val = 0
 
-                            try:
-                                val = float(v)
-                            except Exception:
-                                val = 0
+                # Display metric
+                cols2[i % 4].metric(key, f"{val}{'g' if key != 'Calories' else ''}")
 
-                            cols2[i % 4].metric(
-                                key, f"{val}{'g' if key.lower() != 'calories' else ''}"
-                            )
-
-                            weekly_totals[key] += val
-                    else:
-                        st.warning("⚠️ No nutrition data available.")
+                # Update weekly totals
+                if key not in weekly_totals:
+                    weekly_totals[key] = 0
+                weekly_totals[key] += val
 
         st.markdown("---")
         st.markdown("### ⭐ Rate this Meal")
@@ -252,8 +241,13 @@ with tabs[2]:
         st.markdown("### 💬 Feedback")
         feedback = st.text_area("Any comments or suggestions?")
 
-    except Exception as e:
-        st.error(f"⚠️ Error in Diet Recommendation tab: {e}")
+        # ✅ Weekly nutrition summary
+        st.markdown("---")
+        st.subheader("📊 Weekly Nutrition Summary")
+        cols3 = st.columns(4)
+        for i, (k, v) in enumerate(weekly_totals.items()):
+            cols3[i % 4].metric(k, f"{round(v, 1)}{'g' if k != 'Calories' else ''}")
+
 
 
 # 📊 Weekly Summary
