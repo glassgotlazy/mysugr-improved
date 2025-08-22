@@ -236,7 +236,7 @@ if st.button("💾 Save This Week's Plan"):
 # ----------------------
 # Export per-user diet history
 # ----------------------
-if get_history_key() in st.session_state and st.session_state[get_history_key()]:
+history_key = get_user_key("diet_history") if history_key in st.session_state and st.session_state[history_key]:
     df = pd.DataFrame(st.session_state[get_history_key()])
 
     st.subheader("📜 Your Diet History")
