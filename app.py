@@ -199,12 +199,12 @@ st.set_page_config(
 # ----------------------
 # User-specific Diet History
 # ----------------------
-def get_history_key():
+def get_user_key("diet_history"):
     return get_user_key("diet_history")
 
 def save_meal_to_history(day, meal, rating, note):
     """Save meal log per user in session state."""
-    key = get_history_key()
+    key = get_user_key("diet_history")
     if key not in st.session_state:
         st.session_state[key] = []
 
@@ -222,7 +222,7 @@ def save_meal_to_history(day, meal, rating, note):
 
 # Collect today's meals into history
 if st.button("💾 Save This Week's Plan"):
-    key = get_history_key()
+    key = get_user_key("diet_history")
     if key not in st.session_state:
         st.session_state[key] = []
 
@@ -237,7 +237,7 @@ if st.button("💾 Save This Week's Plan"):
 # Export per-user diet history
 # ----------------------
 history_key = get_user_key("diet_history") if history_key in st.session_state and st.session_state[history_key]:
-    df = pd.DataFrame(st.session_state[get_history_key()])
+    df = pd.DataFrame(st.session_state[get_user_key("diet_history")])
 
     st.subheader("📜 Your Diet History")
     st.dataframe(df, use_container_width=True)
