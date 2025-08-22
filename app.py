@@ -448,6 +448,7 @@ meals = {
              "nutrition": {"Calories": 170, "Protein": 9, "Carbs": 30, "Fat": 4}},
         ]
     }
+
 days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
 categories = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
@@ -496,7 +497,7 @@ for i, (k, v) in enumerate(weekly_totals.items()):
     summary_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
 
 # ----------------------
-# Diet History Tab
+# Diet History Tab (user-specific)
 # ----------------------
 history_key = get_user_key("diet_history")
 if history_key in st.session_state and st.session_state[history_key]:
