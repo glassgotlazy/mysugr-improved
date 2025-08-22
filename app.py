@@ -199,8 +199,9 @@ st.set_page_config(
 # ----------------------
 # User-specific Diet History
 # ----------------------
-def get_user_key("diet_history"):
-    return get_user_key("diet_history")
+def get_user_key(key: str) -> str:
+    """Generate session
+
 
 def save_meal_to_history(day, meal, rating, note):
     """Save meal log per user in session state."""
