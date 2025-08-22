@@ -1,79 +1,35 @@
-# =======================
-# 🔐 SIMPLE AUTH (drop-in)
-# Place this after st.set_page_config(...) and BEFORE st.title(...)
-# =======================
-import os, hashlib
+# ------------------------
+# Imports
+# ------------------------
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import random
 from datetime import datetime
 
-USERS_FILE = "users.csv"
-
-def _hash_password(p: str) -> str:
-    return hashlib.sha256(p.encode("utf-8")).hexdigest()
-
-def _load_users() -> dict:
-    if os.path.exists(USERS_FILE):
-        df_users = pd.read_csv(USERS_FILE)
-        if not df_users.empty:
-            return {row["username"]: row["password_hash"] for _, row in df_users.iterrows()}
-    return {}
-
-def _save_user(username: str, password_hash: str):
-    import pandas as _pd
-    row = _pd.DataFrame([{
-        "username": username,
-        "password_hash": password_hash,
-        "created_at": datetime.utcnow().isoformat()
-    }])
-    header = not os.path.exists(USERS_FILE)
-    row.to_csv(USERS_FILE, mode="a", header=header, index=False)
-
-# Session flags
+# ------------------------
+# Session State for Login
+# ------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-    st.session_state.username = None
 
-# If not logged in, show auth UI and stop the app below
-if not st.session_state.logged_in:
-    st.markdown("## 🔐 Login / Sign up")
-    mode = st.radio("Choose an option:", ["Login", "Sign up"], horizontal=True)
+if "weekly_meals" not in st.session_state:
+    st.session_state.weekly_meals = {}
 
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+# ------------------------
+# App Layout
+# ------------------------
+st.set_page_config(page_title="MySugr Improved", layout="wide")
 
-    if mode == "Sign up":
-        password2 = st.text_input("Confirm Password", type="password")
-        if st.button("Create account"):
-            if not username or not password:
-                st.error("Please enter a username and password.")
-            elif password != password2:
-                st.error("Passwords do not match.")
-            else:
-                users = _load_users()
-                if username in users:
-                    st.error("Username already exists.")
-                else:
-                    _save_user(username, _hash_password(password))
-                    st.success("✅ Account created. Please switch to Login.")
-    else:  # Login
-        if st.button("Log in"):
-            users = _load_users()
-            if username in users and users[username] == _hash_password(password):
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.success("✅ Logged in!")
-                st.rerun()
-            else:
-                st.error("Invalid username or password.")
+# Create Tabs (adjust labels to match your existing main code)
+tabs = st.tabs([
+    "🏠 Dashboard",
+    "💉 Insulin",
+    "🍽️ Diet Plan",
+    "📊 Reports",
+    "⚙️ Settings"
+])
 
-    st.stop()  # prevent the rest of the app from rendering until logged in
-
-# Sidebar logout (only visible after login)
-st.sidebar.write(f"👋 {st.session_state.username}")
-if st.sidebar.button("Log out"):
-    st.session_state.clear()
-    st.rerun()
-# =======================
-# END AUTH BLOCK
 # =======================
 import streamlit as st
 import pandas as pd
