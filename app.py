@@ -112,44 +112,43 @@ with tabs[2]:
 import streamlit as st
 import random
 import pandas as pd
-from datetime import datetime
 
 # ----------------------
-# Meals categorized with nutrition
+# Meals categorized with nutrition + correct images
 meals = {
     "Breakfast": [
         {"name": "Oatmeal with Fruits",
-         "img": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd",
+         "img": "https://www.eatingwell.com/thmb/UnHbHaOlhrJTRd3nKgh9pPAhf6Q=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/oatmeal-with-fruit-2000-35ad86a47c9641a8bff1f23217d9c13b.jpg",
          "nutrition": {"Calories": 250, "Protein": 8, "Carbs": 45, "Fat": 5}},
         {"name": "Avocado Toast",
-         "img": "https://images.unsplash.com/photo-1551183053-bf91a1d81141",
+         "img": "https://cookieandkate.com/images/2012/04/avocado-toast-recipe-2.jpg",
          "nutrition": {"Calories": 300, "Protein": 10, "Carbs": 30, "Fat": 12}},
         {"name": "Smoothie Bowl",
-         "img": "https://images.unsplash.com/photo-1505253216365-4f5b2b9d5d99",
+         "img": "https://downshiftology.com/wp-content/uploads/2018/08/Smoothie-Bowl-5.jpg",
          "nutrition": {"Calories": 280, "Protein": 9, "Carbs": 40, "Fat": 7}},
     ],
     "Lunch": [
         {"name": "Grilled Chicken Salad",
-         "img": "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
+         "img": "https://www.skinnytaste.com/wp-content/uploads/2018/03/Grilled-Chicken-Salad-10.jpg",
          "nutrition": {"Calories": 400, "Protein": 35, "Carbs": 20, "Fat": 15}},
         {"name": "Quinoa Bowl",
-         "img": "https://images.unsplash.com/photo-1604909053369-f06d9f9a1f8e",
+         "img": "https://simpleveganista.com/wp-content/uploads/2019/06/buddha-bowl-recipe-1.jpg",
          "nutrition": {"Calories": 420, "Protein": 18, "Carbs": 55, "Fat": 12}},
     ],
     "Dinner": [
         {"name": "Baked Salmon with Veggies",
-         "img": "https://images.unsplash.com/photo-1589923188900-3f4e1f3edbe0",
+         "img": "https://www.wellplated.com/wp-content/uploads/2021/02/Baked-Salmon-with-Veggies.jpg",
          "nutrition": {"Calories": 500, "Protein": 40, "Carbs": 25, "Fat": 22}},
         {"name": "Veggie Stir Fry",
-         "img": "https://images.unsplash.com/photo-1589927986089-3581237894ef",
+         "img": "https://www.acouplecooks.com/wp-content/uploads/2020/01/Veggie-Stir-Fry-009.jpg",
          "nutrition": {"Calories": 350, "Protein": 12, "Carbs": 50, "Fat": 10}},
     ],
     "Snack": [
         {"name": "Greek Yogurt with Honey",
-         "img": "https://images.unsplash.com/photo-1588361861125-d3a1a0b5e3cb",
+         "img": "https://www.dairydiscoveryzone.com/sites/default/files/recipes/Greek%20Yogurt%20with%20Honey%20%26%20Nuts_0.jpg",
          "nutrition": {"Calories": 180, "Protein": 12, "Carbs": 20, "Fat": 4}},
         {"name": "Mixed Nuts",
-         "img": "https://images.unsplash.com/photo-1604908554266-95c0d37db114",
+         "img": "https://www.healthifyme.com/blog/wp-content/uploads/2021/11/mixed-nuts-benefits.jpg",
          "nutrition": {"Calories": 200, "Protein": 6, "Carbs": 8, "Fat": 18}},
     ]
 }
@@ -157,7 +156,7 @@ meals = {
 days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 categories = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
-# Rotate through meals
+# Initialize weekly meals if not set
 if "weekly_meals" not in st.session_state:
     st.session_state.weekly_meals = {}
     for i, day in enumerate(days):
@@ -165,65 +164,53 @@ if "weekly_meals" not in st.session_state:
         st.session_state.weekly_meals[day] = random.choice(meals[category])
 
 # ----------------------
-# Tabs
+# Diet Plan in Table Layout
 # ----------------------
-diet_tabs = st.tabs(["🍽️ Weekly Diet Plan", "📊 Diet History"])
+st.title("🍽️ Auto-Balanced Weekly Diet Plan")
 
-# ----------------------
-# Diet Plan Tab
-# ----------------------
-with diet_tabs[0]:
-    st.title("🍽️ Auto-Balanced Weekly Diet Plan")
+weekly_totals = {"Calories": 0, "Protein": 0, "Carbs": 0, "Fat": 0}
 
-    # Track weekly totals
-    weekly_totals = {"Calories": 0, "Protein": 0, "Carbs": 0, "Fat": 0}
+for day in days:
+    meal = st.session_state.weekly_meals[day]
 
-    for day in days:
-        meal = st.session_state.weekly_meals[day]
-        st.subheader(f"{day} → {meal['name']}")
+    with st.container():
+        cols = st.columns([1, 2, 2, 2])  # layout: image | details | nutrition | actions
 
-        # Smaller image
-        st.image(meal["img"], caption=meal["name"], width=250)
+        # Image
+        with cols[0]:
+            st.image(meal["img"], caption=meal["name"], width=120)
 
-        # Nutrition breakdown
-        st.markdown("**📊 Nutrition Breakdown:**")
-        cols = st.columns(4)
-        for i, (k, v) in enumerate(meal["nutrition"].items()):
-            cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
+        # Day + Meal Name
+        with cols[1]:
+            st.markdown(f"### {day}")
+            st.write(f"**{meal['name']}**")
 
-            # Add to weekly totals
-            weekly_totals[k] += v
+        # Nutrition
+        with cols[2]:
+            for k, v in meal["nutrition"].items():
+                st.write(f"**{k}:** {v}{'g' if k!='Calories' else ''}")
+                weekly_totals[k] += v
 
-        # Replace option
-        if st.button(f"🔄 Change {day}"):
-            for cat, meal_list in meals.items():
-                if meal in meal_list:
-                    st.session_state.weekly_meals[day] = random.choice(meal_list)
-            st.rerun()
+        # Actions
+        with cols[3]:
+            if st.button(f"🔄 Change {day}"):
+                for cat, meal_list in meals.items():
+                    if meal in meal_list:
+                        st.session_state.weekly_meals[day] = random.choice(meal_list)
+                st.rerun()
+            st.slider("⭐ Rating", 1, 5, 3, key=f"rating_{day}")
+            st.text_area("📝 Notes", key=f"note_{day}")
 
-        # Rating + Notes
-        st.slider(f"⭐ Rate {meal['name']}", 1, 5, 3, key=f"rating_{day}")
-        st.text_area(f"📝 Notes for {meal['name']}", key=f"note_{day}")
-        st.write("---")
-
-    # 📊 Weekly Summary
-    st.subheader("📅 Weekly Nutrition Summary")
-    summary_cols = st.columns(4)
-    for i, (k, v) in enumerate(weekly_totals.items()):
-        summary_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
+    st.write("---")
 
 # ----------------------
-# Diet History Tab
+# Weekly Summary
 # ----------------------
-with diet_tabs[1]:
-    st.markdown("### 📊 Your Meal Rating History")
-    try:
-        df = pd.read_csv("diet_history.csv")
-        st.dataframe(df)
-        avg_ratings = df.groupby("meal")["rating"].mean().sort_values(ascending=False)
-        st.bar_chart(avg_ratings)
-    except FileNotFoundError:
-        st.info("No ratings saved yet. Start rating meals to build your history!")
+st.subheader("📅 Weekly Nutrition Summary")
+summary_cols = st.columns(4)
+for i, (k, v) in enumerate(weekly_totals.items()):
+    summary_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
+
 
 
 import streamlit as st
