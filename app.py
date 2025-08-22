@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import datetime
-import os
 
 # ---------------- Session & Auth ---------------- #
 if "users" not in st.session_state:
@@ -28,23 +27,21 @@ def signup(username, password):
 
 
 def get_user_key(suffix):
-    """Generate session-specific key for each user"""
     return f"{st.session_state['username']}_{suffix}"
 
 
-# ---------------- Login / Signup Page ---------------- #
+# ---------------- Login / Signup ---------------- #
 if not st.session_state["logged_in"]:
     st.title("🔐 Login / Signup")
 
     auth_choice = st.radio("Choose action:", ["Login", "Signup"])
-
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
 
     if auth_choice == "Login":
         if st.button("Login"):
             if login(username, password):
-                st.success("Logged in successfully ✅")
+                st.success("Logged in ✅")
                 st.rerun()
             else:
                 st.error("Invalid credentials ❌")
@@ -64,7 +61,38 @@ if st.sidebar.button("Logout"):
     st.rerun()
 
 # ---------------- Tabs ---------------- #
-tab1, tab2, tab3 = st.tabs(["💉 Insulin", "🥗 Diet", "📊 Weekly Summary"])
+tab0, tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "💉 Insulin", "🥗 Diet", "📈 Weekly Summary"])
+
+# ===================================================== #
+# 📊 DASHBOARD
+# ===================================================== #
+with tab0:
+    st.header("📊 Dashboard Overview")
+
+    insulin_key = get_user_key("insulin_history")
+    diet_key = get_user_key("diet_history")
+
+    if insulin_key not in st.session_state:
+        st.session_state[insulin_key] = pd.DataFrame(columns=["carbs", "bg", "dose", "timestamp"])
+    if diet_key not in st.session_state:
+        st.session_state[diet_key] = pd.DataFrame(columns=["meal", "rating", "notes", "timestamp"])
+
+    insulin_df = st.session_state[insulin_key]
+    diet_df = st.session_state[diet_key]
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("💉 Total Insulin Records", len(insulin_df))
+    with col2:
+        st.metric("🥗 Meals Logged", len(diet_df))
+
+    if not insulin_df.empty:
+        st.subheader("📉 Blood Glucose & Dose History")
+        st.line_chart(insulin_df.set_index("timestamp")[["bg", "dose"]])
+
+    if not diet_df.empty:
+        st.subheader("⭐ Meal Ratings Trend")
+        st.line_chart(diet_df.set_index("timestamp")[["rating"]])
 
 # ===================================================== #
 # 💉 INSULIN TAB
@@ -83,16 +111,21 @@ with tab1:
         correction_insulin = (current_bg - target_bg) / correction_factor if current_bg > target_bg else 0
         total_dose = carb_insulin + correction_insulin
 
-        st.subheader("📊 Insulin Dose Recommendation")
+        st.subheader("📊 Dose Recommendation")
         st.metric("Carb Coverage", f"{carb_insulin:.1f} units")
         st.metric("Correction Dose", f"{correction_insulin:.1f} units")
         st.metric("✅ Total Recommended Dose", f"{total_dose:.1f} units")
 
-        st.markdown("### 📉 Dose Breakdown")
-        st.progress(min(int((total_dose / 20) * 100), 100))
-        st.bar_chart(
-            pd.DataFrame({"Insulin Units": [carb_insulin, correction_insulin]},
-                         index=["Carb Coverage", "Correction"])
+        insulin_key = get_user_key("insulin_history")
+        new_entry = {
+            "carbs": carbs,
+            "bg": current_bg,
+            "dose": total_dose,
+            "timestamp": datetime.datetime.now(),
+        }
+        st.session_state[insulin_key] = pd.concat(
+            [st.session_state[insulin_key], pd.DataFrame([new_entry])],
+            ignore_index=True
         )
 
 # ===================================================== #
@@ -101,7 +134,6 @@ with tab1:
 with tab2:
     st.header("🥗 Diet Planner")
 
-    # Example diet plans with images
     diet_plans = {
         "Breakfast": [
             ("Oatmeal with fruits", "https://i.imgur.com/1O4iN5c.jpg"),
@@ -122,9 +154,7 @@ with tab2:
 
     history_key = get_user_key("diet_history")
     if history_key not in st.session_state:
-        st.session_state[history_key] = pd.DataFrame(
-            columns=["meal", "rating", "notes", "timestamp"]
-        )
+        st.session_state[history_key] = pd.DataFrame(columns=["meal", "rating", "notes", "timestamp"])
 
     for category, meals in diet_plans.items():
         st.subheader(category)
@@ -158,10 +188,10 @@ with tab2:
             st.download_button("📥 Download Diet History (CSV)", f, file_name=csv_file)
 
 # ===================================================== #
-# 📊 WEEKLY SUMMARY TAB
+# 📈 WEEKLY SUMMARY TAB
 # ===================================================== #
 with tab3:
-    st.header("📊 Weekly Summary")
+    st.header("📈 Weekly Summary")
 
     history_key = get_user_key("diet_history")
     if history_key in st.session_state and not st.session_state[history_key].empty:
