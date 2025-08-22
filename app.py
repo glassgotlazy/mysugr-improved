@@ -1,6 +1,18 @@
 import streamlit as st
 import pandas as pd
 import os
+import plotly.express as px
+import random
+from datetime import datetime
+
+# ------------------------
+# Page Config
+# ------------------------
+st.set_page_config(
+    page_title="MySugr Improved",
+    page_icon="💉",
+    layout="wide"
+)
 
 # ------------------------
 # User Authentication Utils
@@ -25,15 +37,13 @@ def check_login(username, password):
     match = users[(users["username"] == username) & (users["password"] == password)]
     return not match.empty
 
-
 # ------------------------
-# Session State
+# Session State Init
 # ------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = None
-
 
 # ------------------------
 # Login / Signup Pages
@@ -66,7 +76,7 @@ if not st.session_state.logged_in:
             else:
                 st.error("⚠️ Username already exists. Try a different one.")
 
-    st.stop()  # Prevents the rest of the app from running until logged in
+    st.stop()
 
 # ------------------------
 # If logged in → Continue App
@@ -77,42 +87,9 @@ if st.sidebar.button("Logout"):
     st.session_state.username = None
     st.rerun()
 
-
 # ------------------------
-# App Layout
+# Tabs Layout (ONLY ONCE)
 # ------------------------
-st.set_page_config(page_title="MySugr Improved", layout="wide")
-
-# Create Tabs (adjust labels to match your existing main code)
-tabs = st.tabs([
-    "🏠 Dashboard",
-    "💉 Insulin",
-    "🍽️ Diet Plan",
-    "📊 Reports",
-    "⚙️ Settings"
-])
-
-# =======================
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import random
-from datetime import datetime
-
-# -------------------------
-# Page Config
-# -------------------------
-st.set_page_config(
-    page_title="MySugar Advanced",
-    page_icon="💉",
-    layout="wide"
-)
-
-st.title("🩸 MySugar - Diabetes Tracking Dashboard")
-
-# -------------------------
-# Tabs
-# -------------------------
 tabs = st.tabs([
     "📊 Dashboard",
     "🥗 Diet Tracking",
@@ -125,17 +102,13 @@ tabs = st.tabs([
 # -------------------------
 with tabs[0]:
     st.header("📊 Dashboard")
-
     uploaded_file = st.file_uploader("📂 Upload your CSV file", type="csv")
 
     if uploaded_file:
         try:
             df = pd.read_csv(uploaded_file)
-
-            # Normalize column names
             df.columns = df.columns.str.strip().str.lower()
 
-            # Merge date & time into datetime if available
             if "date" in df.columns and "time" in df.columns:
                 df["datetime"] = pd.to_datetime(df["date"] + " " + df["time"], errors="coerce")
             elif "datetime" in df.columns:
@@ -144,16 +117,13 @@ with tabs[0]:
                 st.error("❌ No 'datetime' column found.")
                 st.stop()
 
-            # Show preview
             st.success("✅ File uploaded successfully!")
             st.dataframe(df.head())
 
-            # Line chart for Blood Sugar
             if "blood sugar measurement (mg/dl)" in df.columns:
                 fig = px.line(df, x="datetime", y="blood sugar measurement (mg/dl)", title="Blood Sugar Over Time")
                 st.plotly_chart(fig, use_container_width=True)
 
-            # Line chart for Insulin
             insulin_cols = [col for col in df.columns if "insulin" in col]
             if insulin_cols:
                 for col in insulin_cols:
@@ -170,27 +140,21 @@ with tabs[0]:
 # -------------------------
 with tabs[1]:
     st.header("🥗 Diet Tracking")
-
     st.write("Keep track of whether you followed your diet plan today.")
-
     col1, col2 = st.columns([1, 2])
-
     with col1:
         diet_followed = st.checkbox("✅ Did you follow your diet today?")
-
     with col2:
         if not diet_followed:
             st.text_input("❌ If not, what did you eat instead?")
 
 # -------------------------
-# 💉 Insulin Recommendation Tab
+# Insulin Recommendation Tab
 # -------------------------
 with tabs[2]:
     st.header("💉 Insulin Assistant")
-
     st.markdown("This tool helps you calculate your **meal-time insulin dose** based on your carbs and blood sugar levels.")
 
-    # Inputs
     col1, col2 = st.columns(2)
     with col1:
         carbs = st.number_input("🍞 Carbs in your meal (grams)", min_value=0, max_value=200, value=50)
@@ -201,38 +165,28 @@ with tabs[2]:
 
     target_glucose = st.number_input("🎯 Target Blood Sugar (mg/dL)", min_value=80, max_value=150, value=110)
 
-    # Calculations
     carb_insulin = carbs / carb_ratio if carb_ratio else 0
     correction_insulin = max((glucose - target_glucose) / correction_factor, 0) if correction_factor else 0
     total_dose = round(carb_insulin + correction_insulin, 1)
 
-    # Results
     st.subheader("📊 Insulin Dose Recommendation")
     st.metric("Carb Coverage", f"{carb_insulin:.1f} units")
     st.metric("Correction Dose", f"{correction_insulin:.1f} units")
     st.metric("✅ Total Recommended Dose", f"{total_dose:.1f} units")
 
-    # Visualization
     st.markdown("### 📉 Dose Breakdown")
-    st.progress(min(int((total_dose/20)*100), 100))  # progress bar out of 20 units
-    st.bar_chart(
-        pd.DataFrame(
-            {"Insulin Units": [carb_insulin, correction_insulin]},
-            index=["Carb Coverage", "Correction"]
-        )
-    )
+    st.progress(min(int((total_dose/20)*100), 100))
+    st.bar_chart(pd.DataFrame({"Insulin Units": [carb_insulin, correction_insulin]}, index=["Carb Coverage", "Correction"]))
 
-    # Notes
     st.markdown("💡 **Note:** This is a helper tool, not medical advice. Always confirm with your doctor before making insulin adjustments.")
 
-# ----------------------
-# Diet Tab
-# ----------------------
-# ----------------------
+# -------------------------
 # Diet Recommendation Tab
-# ----------------------
+# -------------------------
 with tabs[3]:
     st.header("🍎 Diet Recommendations")
+    # (keep your existing weekly meals + images + notes logic here, unchanged)
+
 
     # Days of the week
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
