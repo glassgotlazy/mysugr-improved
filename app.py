@@ -196,69 +196,72 @@ st.set_page_config(
     layout="wide"
 )
 
-# ------------------------
-# User Authentication Utils
-# ------------------------
-USER_FILE = "users.csv"
+# ----------------------
+# User-specific Diet History
+# ----------------------
+def get_history_key():
+    return get_user_key("diet_history")
 
-def load_users():
-    if os.path.exists(USER_FILE):
-        return pd.read_csv(USER_FILE)
-    return pd.DataFrame(columns=["username", "password"])
+def save_meal_to_history(day, meal, rating, note):
+    """Save meal log per user in session state."""
+    key = get_history_key()
+    if key not in st.session_state:
+        st.session_state[key] = []
 
-def save_user(username, password):
-    users = load_users()
-    if username in users["username"].values:
-        return False  # User already exists
-    users = pd.concat([users, pd.DataFrame([[username, password]], columns=["username", "password"])], ignore_index=True)
-    users.to_csv(USER_FILE, index=False)
-    return True
+    st.session_state[key].append({
+        "Date": datetime.now().strftime("%Y-%m-%d"),
+        "Day": day,
+        "Meal": meal["name"],
+        "Calories": meal["nutrition"]["Calories"],
+        "Protein": meal["nutrition"]["Protein"],
+        "Carbs": meal["nutrition"]["Carbs"],
+        "Fat": meal["nutrition"]["Fat"],
+        "Rating": rating,
+        "Note": note
+    })
 
-def check_login(username, password):
-    users = load_users()
-    match = users[(users["username"] == username) & (users["password"] == password)]
-    return not match.empty
+# Collect today's meals into history
+if st.button("💾 Save This Week's Plan"):
+    key = get_history_key()
+    if key not in st.session_state:
+        st.session_state[key] = []
 
-# ------------------------
-# Session State Init
-# ------------------------
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "username" not in st.session_state:
-    st.session_state.username = None
+    for day, meal in user_weekly_meals.items():
+        rating = st.session_state.get(f"rating_{day}_{st.session_state.username}", 3)
+        note = st.session_state.get(f"note_{day}_{st.session_state.username}", "")
+        save_meal_to_history(day, meal, rating, note)
 
-# ------------------------
-# Login / Signup Pages
-# ------------------------
-if not st.session_state.logged_in:
-    st.title("🔐 Welcome to MySugr Improved")
+    st.success("✅ Meals saved to your personal history!")
 
-    auth_choice = st.radio("Select Action", ["Login", "Sign Up"])
+# ----------------------
+# Export per-user diet history
+# ----------------------
+if get_history_key() in st.session_state and st.session_state[get_history_key()]:
+    df = pd.DataFrame(st.session_state[get_history_key()])
 
-    if auth_choice == "Login":
-        st.subheader("Login to your account")
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        if st.button("Login"):
-            if check_login(username, password):
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.success(f"✅ Welcome back, {username}!")
-                st.rerun()
-            else:
-                st.error("❌ Invalid username or password")
+    st.subheader("📜 Your Diet History")
+    st.dataframe(df, use_container_width=True)
 
-    else:  # Signup
-        st.subheader("Create a new account")
-        new_username = st.text_input("Choose a username")
-        new_password = st.text_input("Choose a password", type="password")
-        if st.button("Sign Up"):
-            if save_user(new_username, new_password):
-                st.success("🎉 Account created! Please log in.")
-            else:
-                st.error("⚠️ Username already exists. Try a different one.")
+    # Download CSV
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "⬇️ Download Diet History (CSV)",
+        csv,
+        file_name=f"diet_history_{st.session_state.username}.csv",
+        mime="text/csv"
+    )
 
-    st.stop()
+    # Download Excel
+    excel_file = f"diet_history_{st.session_state.username}.xlsx"
+    df.to_excel(excel_file, index=False)
+    with open(excel_file, "rb") as f:
+        st.download_button(
+            "⬇️ Download Diet History (Excel)",
+            f,
+            file_name=excel_file,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
 
 # ------------------------
 # If logged in → Continue App
