@@ -97,8 +97,7 @@ tab0, tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "💉 Insulin", "🥗 Diet",
         else:
             st.error("Uploaded file must contain a 'timestamp' column and 'glucose' column.")
 
-with tab0:
-    st.header("📊 Dashboard Overview")
+
 
     insulin_key = get_user_key("insulin_history")
     diet_key = get_user_key("diet_history")
