@@ -115,51 +115,54 @@ import pandas as pd
 from datetime import datetime
 
 # ----------------------
-# Meals categorized with nutrition + correct images
+import random
+import streamlit as st
+import pandas as pd
+
+# ----------------------
+# Meals categorized with nutrition
 meals = {
     "Breakfast": [
         {"name": "Oatmeal with Fruits",
-         "img": "https://www.eatingwell.com/thmb/UnHbHaOlhrJTRd3nKgh9pPAhf6Q=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/oatmeal-with-fruit-2000-35ad86a47c9641a8bff1f23217d9c13b.jpg",
+         "img": "https://www.eatingwell.com/thmb/Q8N0K9j5Uv81f5q1mTtPizBVKpY=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/oatmeal-with-fruits-2000-5c9bb6b3c9e77c0001a6b3dd.jpg",
          "nutrition": {"Calories": 250, "Protein": 8, "Carbs": 45, "Fat": 5}},
         {"name": "Avocado Toast",
-         "img": "https://cookieandkate.com/images/2012/04/avocado-toast-recipe-2.jpg",
+         "img": "https://cookieandkate.com/images/2012/08/best-avocado-toast-recipe-1-2.jpg",
          "nutrition": {"Calories": 300, "Protein": 10, "Carbs": 30, "Fat": 12}},
         {"name": "Smoothie Bowl",
-         "img": "https://downshiftology.com/wp-content/uploads/2018/08/Smoothie-Bowl-5.jpg",
+         "img": "https://minimalistbaker.com/wp-content/uploads/2017/07/HEALTHY-Smoothie-Bowl-8-ingredients-10-minutes-healthy-fruits-nuts-vegan-glutenfree-plantbased-smoothiebowl-recipe-minimalistbaker-5.jpg",
          "nutrition": {"Calories": 280, "Protein": 9, "Carbs": 40, "Fat": 7}},
     ],
     "Lunch": [
         {"name": "Grilled Chicken Salad",
-         "img": "https://www.skinnytaste.com/wp-content/uploads/2018/03/Grilled-Chicken-Salad-10.jpg",
+         "img": "https://www.cookingclassy.com/wp-content/uploads/2020/01/grilled-chicken-salad-21.jpg",
          "nutrition": {"Calories": 400, "Protein": 35, "Carbs": 20, "Fat": 15}},
         {"name": "Quinoa Bowl",
-         "img": "https://simpleveganista.com/wp-content/uploads/2019/06/buddha-bowl-recipe-1.jpg",
+         "img": "https://simpleveganblog.com/wp-content/uploads/2020/09/Quinoa-buddha-bowl-4.jpg",
          "nutrition": {"Calories": 420, "Protein": 18, "Carbs": 55, "Fat": 12}},
     ],
     "Dinner": [
         {"name": "Baked Salmon with Veggies",
-         "img": "https://www.wellplated.com/wp-content/uploads/2021/02/Baked-Salmon-with-Veggies.jpg",
+         "img": "https://www.healthyseasonalrecipes.com/wp-content/uploads/2021/03/baked-salmon-013.jpg",
          "nutrition": {"Calories": 500, "Protein": 40, "Carbs": 25, "Fat": 22}},
         {"name": "Veggie Stir Fry",
-         "img": "https://www.acouplecooks.com/wp-content/uploads/2020/01/Veggie-Stir-Fry-009.jpg",
+         "img": "https://www.acouplecooks.com/wp-content/uploads/2020/02/Veggie-Stir-Fry-009.jpg",
          "nutrition": {"Calories": 350, "Protein": 12, "Carbs": 50, "Fat": 10}},
     ],
     "Snack": [
         {"name": "Greek Yogurt with Honey",
-         "img": "https://www.dairydiscoveryzone.com/sites/default/files/recipes/Greek%20Yogurt%20with%20Honey%20%26%20Nuts_0.jpg",
+         "img": "https://www.cookingclassy.com/wp-content/uploads/2015/05/greek-yogurt-honey-walnuts-breakfast2-srgb..jpg",
          "nutrition": {"Calories": 180, "Protein": 12, "Carbs": 20, "Fat": 4}},
         {"name": "Mixed Nuts",
-         "img": "https://www.healthifyme.com/blog/wp-content/uploads/2021/11/mixed-nuts-benefits.jpg",
+         "img": "https://www.heart.org/-/media/Images/News/2021/September-2021/0929MixedNuts_SC.jpg",
          "nutrition": {"Calories": 200, "Protein": 6, "Carbs": 8, "Fat": 18}},
     ]
 }
 
-days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
 categories = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
-# ----------------------
-# Initialize weekly meals
-# ----------------------
+# Rotate through meals once
 if "weekly_meals" not in st.session_state:
     st.session_state.weekly_meals = {}
     for i, day in enumerate(days):
@@ -167,89 +170,66 @@ if "weekly_meals" not in st.session_state:
         st.session_state.weekly_meals[day] = random.choice(meals[category])
 
 # ----------------------
-# Function to save ratings/notes
+# Tabs for Diet
 # ----------------------
-def save_feedback(day, meal_name, rating, note):
-    entry = {
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "day": day,
-        "meal": meal_name,
-        "rating": rating,
-        "note": note,
-    }
-    try:
-        df = pd.read_csv("diet_history.csv")
-        df = pd.concat([df, pd.DataFrame([entry])], ignore_index=True)
-    except FileNotFoundError:
-        df = pd.DataFrame([entry])
-    df.to_csv("diet_history.csv", index=False)
+diet_tabs = st.tabs(["🥗 Diet Plan", "📊 History"])
 
 # ----------------------
-# Diet Plan in Table Layout
+# Diet Plan Tab
 # ----------------------
-st.title("🍽️ Auto-Balanced Weekly Diet Plan")
+with diet_tabs[0]:
+    st.title("🍽️ Auto-Balanced Weekly Diet Plan")
 
-weekly_totals = {"Calories": 0, "Protein": 0, "Carbs": 0, "Fat": 0}
+    # Track weekly totals
+    weekly_totals = {"Calories": 0, "Protein": 0, "Carbs": 0, "Fat": 0}
 
-for day in days:
-    meal = st.session_state.weekly_meals[day]
+    for day in days:
+        meal = st.session_state.weekly_meals[day]
+        st.markdown(f"### 📅 {day}")
+        cols = st.columns([1, 2])  # Smaller image on left, details on right
 
-    with st.container():
-        cols = st.columns([1, 2, 2, 2])  # layout: image | details | nutrition | actions
-
-        # Image
         with cols[0]:
-            st.image(meal["img"], caption=meal["name"], width=120)
+            st.image(meal["img"], caption=meal["name"], width=150)
 
-        # Day + Meal Name
         with cols[1]:
-            st.markdown(f"### {day}")
-            st.write(f"**{meal['name']}**")
-
-        # Nutrition
-        with cols[2]:
-            for k, v in meal["nutrition"].items():
-                st.write(f"**{k}:** {v}{'g' if k!='Calories' else ''}")
+            st.subheader(meal["name"])
+            st.markdown("**📊 Nutrition Breakdown:**")
+            sub_cols = st.columns(4)
+            for i, (k, v) in enumerate(meal["nutrition"].items()):
+                sub_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
                 weekly_totals[k] += v
 
-        # Actions
-        with cols[3]:
-            if st.button(f"🔄 Change {day}"):
+            # Replace option
+            if st.button(f"🔄 Change {day}", key=f"change_{day}"):
                 for cat, meal_list in meals.items():
                     if meal in meal_list:
                         st.session_state.weekly_meals[day] = random.choice(meal_list)
                 st.rerun()
 
-            rating = st.slider("⭐ Rating", 1, 5, 3, key=f"rating_{day}")
-            note = st.text_area("📝 Notes", key=f"note_{day}")
+            # Rating + Notes
+            st.slider(f"⭐ Rate {meal['name']}", 1, 5, 3, key=f"rating_{day}")
+            st.text_area(f"📝 Notes for {meal['name']}", key=f"note_{day}")
 
-            # Save feedback automatically
-            if st.button(f"💾 Save {day}"):
-                save_feedback(day, meal["name"], rating, note)
-                st.success(f"Saved feedback for {day}!")
+        st.write("---")
 
-    st.write("---")
-
-# ----------------------
-# Weekly Summary
-# ----------------------
-st.subheader("📅 Weekly Nutrition Summary")
-summary_cols = st.columns(4)
-for i, (k, v) in enumerate(weekly_totals.items()):
-    summary_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
+    # 📊 Weekly Summary
+    st.subheader("📅 Weekly Nutrition Summary")
+    summary_cols = st.columns(4)
+    for i, (k, v) in enumerate(weekly_totals.items()):
+        summary_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
 
 # ----------------------
-# Diet History Tab
+# History Tab
 # ----------------------
-st.subheader("📊 Your Meal Rating History")
-try:
-    df = pd.read_csv("diet_history.csv")
-    st.dataframe(df)
-    avg_ratings = df.groupby("meal")["rating"].mean().sort_values(ascending=False)
-    st.bar_chart(avg_ratings)
-except FileNotFoundError:
-    st.info("No ratings saved yet. Start rating meals to build your history!")
-
+with diet_tabs[1]:
+    st.header("📊 Your Meal Rating History")
+    try:
+        df = pd.read_csv("diet_history.csv")
+        st.dataframe(df)
+        avg_ratings = df.groupby("meal")["rating"].mean().sort_values(ascending=False)
+        st.bar_chart(avg_ratings)
+    except FileNotFoundError:
+        st.info("No ratings saved yet. Start rating meals to build your history!")
 
 
 
