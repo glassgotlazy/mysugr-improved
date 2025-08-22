@@ -86,47 +86,61 @@ with tabs[1]:
             st.text_input("❌ If not, what did you eat instead?")
 
 # ----------------------
-# 💉 Insulin Recommendation Tab
+# 💉 Insulin Recommendation Tab (Interactive)
 # ----------------------
 with tabs[1]:
     st.header("💉 Insulin Assistant")
+    st.markdown("Easily calculate your **meal-time insulin dose** with an interactive simulator.")
 
-    st.markdown("This tool helps you calculate your **meal-time insulin dose** based on your carbs and blood sugar levels.")
-
-    # Inputs
+    # 🔹 User Inputs (interactive sliders)
+    st.subheader("⚙️ Inputs")
     col1, col2 = st.columns(2)
     with col1:
-        carbs = st.number_input("🍞 Carbs in your meal (grams)", min_value=0, max_value=200, value=50)
+        carbs = st.slider("🍞 Carbs in your meal (grams)", 0, 200, 60, step=5)
         carb_ratio = st.number_input("⚖️ Insulin-to-Carb Ratio (g/unit)", min_value=1, max_value=30, value=10)
     with col2:
-        glucose = st.number_input("🩸 Current Blood Sugar (mg/dL)", min_value=50, max_value=400, value=150)
+        glucose = st.slider("🩸 Current Blood Sugar (mg/dL)", 50, 400, 160, step=5)
         correction_factor = st.number_input("🔧 Correction Factor (mg/dL per unit)", min_value=10, max_value=100, value=50)
 
     target_glucose = st.number_input("🎯 Target Blood Sugar (mg/dL)", min_value=80, max_value=150, value=110)
 
-    # Calculations
+    # 🔹 Dose Calculation
     carb_insulin = carbs / carb_ratio if carb_ratio else 0
     correction_insulin = max((glucose - target_glucose) / correction_factor, 0) if correction_factor else 0
     total_dose = round(carb_insulin + correction_insulin, 1)
 
-    # Results
+    # 🔹 Display Results
     st.subheader("📊 Insulin Dose Recommendation")
-    st.metric("Carb Coverage", f"{carb_insulin:.1f} units")
-    st.metric("Correction Dose", f"{correction_insulin:.1f} units")
-    st.metric("✅ Total Recommended Dose", f"{total_dose:.1f} units")
+    dose_cols = st.columns(3)
+    dose_cols[0].metric("Carb Coverage", f"{carb_insulin:.1f} units")
+    dose_cols[1].metric("Correction Dose", f"{correction_insulin:.1f} units")
+    dose_cols[2].metric("✅ Total Dose", f"{total_dose:.1f} units")
 
-    # Visualization
+    # 🔹 Visualization
     st.markdown("### 📉 Dose Breakdown")
-    st.progress(min(int((total_dose/20)*100), 100))  # progress bar out of 20 units
+    st.progress(min(int((total_dose/20)*100), 100))  
+
     st.bar_chart(
         pd.DataFrame(
-            {"Insulin Units": [carb_insulin, correction_insulin]},
-            index=["Carb Coverage", "Correction"]
+            {"Insulin Units": [carb_insulin, correction_insulin, total_dose]},
+            index=["Carb Coverage", "Correction", "Total"]
         )
     )
 
-    # Notes
-    st.markdown("💡 **Note:** This is a helper tool, not medical advice. Always confirm with your doctor before making insulin adjustments.")
+    # 🔹 What-if Scenario
+    st.markdown("### 🔮 What-if Simulator")
+    sim_carbs = st.slider("Adjust carbs to see effect", 0, 200, carbs, step=5)
+    sim_glucose = st.slider("Adjust glucose to see effect", 50, 400, glucose, step=5)
+
+    sim_carb_insulin = sim_carbs / carb_ratio if carb_ratio else 0
+    sim_correction_insulin = max((sim_glucose - target_glucose) / correction_factor, 0) if correction_factor else 0
+    sim_total = round(sim_carb_insulin + sim_correction_insulin, 1)
+
+    st.info(f"👉 With **{sim_carbs}g carbs** and **{sim_glucose} mg/dL glucose**, your dose would be **{sim_total} units**.")
+
+    # 🔹 Disclaimer
+    st.markdown("💡 **Disclaimer:** This tool is for educational purposes only. Always consult your doctor before adjusting insulin.")
+
 
 
 import streamlit as st
