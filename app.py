@@ -112,6 +112,7 @@ with tabs[2]:
 import streamlit as st
 import random
 import pandas as pd
+from datetime import datetime
 
 # ----------------------
 # Meals categorized with nutrition + correct images
@@ -156,12 +157,32 @@ meals = {
 days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 categories = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
-# Initialize weekly meals if not set
+# ----------------------
+# Initialize weekly meals
+# ----------------------
 if "weekly_meals" not in st.session_state:
     st.session_state.weekly_meals = {}
     for i, day in enumerate(days):
         category = categories[i % len(categories)]
         st.session_state.weekly_meals[day] = random.choice(meals[category])
+
+# ----------------------
+# Function to save ratings/notes
+# ----------------------
+def save_feedback(day, meal_name, rating, note):
+    entry = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "day": day,
+        "meal": meal_name,
+        "rating": rating,
+        "note": note,
+    }
+    try:
+        df = pd.read_csv("diet_history.csv")
+        df = pd.concat([df, pd.DataFrame([entry])], ignore_index=True)
+    except FileNotFoundError:
+        df = pd.DataFrame([entry])
+    df.to_csv("diet_history.csv", index=False)
 
 # ----------------------
 # Diet Plan in Table Layout
@@ -198,8 +219,14 @@ for day in days:
                     if meal in meal_list:
                         st.session_state.weekly_meals[day] = random.choice(meal_list)
                 st.rerun()
-            st.slider("⭐ Rating", 1, 5, 3, key=f"rating_{day}")
-            st.text_area("📝 Notes", key=f"note_{day}")
+
+            rating = st.slider("⭐ Rating", 1, 5, 3, key=f"rating_{day}")
+            note = st.text_area("📝 Notes", key=f"note_{day}")
+
+            # Save feedback automatically
+            if st.button(f"💾 Save {day}"):
+                save_feedback(day, meal["name"], rating, note)
+                st.success(f"Saved feedback for {day}!")
 
     st.write("---")
 
@@ -210,6 +237,19 @@ st.subheader("📅 Weekly Nutrition Summary")
 summary_cols = st.columns(4)
 for i, (k, v) in enumerate(weekly_totals.items()):
     summary_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
+
+# ----------------------
+# Diet History Tab
+# ----------------------
+st.subheader("📊 Your Meal Rating History")
+try:
+    df = pd.read_csv("diet_history.csv")
+    st.dataframe(df)
+    avg_ratings = df.groupby("meal")["rating"].mean().sort_values(ascending=False)
+    st.bar_chart(avg_ratings)
+except FileNotFoundError:
+    st.info("No ratings saved yet. Start rating meals to build your history!")
+
 
 
 
