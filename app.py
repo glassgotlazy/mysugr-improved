@@ -243,72 +243,53 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 
 # ----------------------
-# Export Helper: Excel
+import pandas as pd
+import streamlit as st
+
+# ----------------------
+# Export function (Excel with CSV fallback)
 # ----------------------
 def export_excel(df, doctor_name):
-    filename = f"diet_history_{doctor_name}_{datetime.now().strftime('%Y%m%d')}.xlsx"
-    df.to_excel(filename, index=False)
-    return filename
-
-# ----------------------
-# Export Helper: PDF
-# ----------------------
-def export_pdf(df, doctor_name):
-    filename = f"diet_history_{doctor_name}_{datetime.now().strftime('%Y%m%d')}.pdf"
-    doc = SimpleDocTemplate(filename, pagesize=A4)
-    styles = getSampleStyleSheet()
-    elements = []
-
-    # Title
-    elements.append(Paragraph(f"Diet History Report - Dr. {doctor_name}", styles["Title"]))
-    elements.append(Spacer(1, 12))
-
-    # Convert dataframe to table
-    table_data = [df.columns.tolist()] + df.values.tolist()
-    table = Table(table_data)
-    table.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.lightblue),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
-    ]))
-    elements.append(table)
-
-    doc.build(elements)
-    return filename
-
-# ----------------------
-# Diet History Tab (updated)
-# ----------------------
-with diet_tabs[-1]:
-    st.markdown("### 📊 Your Meal Rating History")
-
-    doctor_name = st.text_input("👨‍⚕️ Enter your Doctor’s Name")
-
+    safe_name = doctor_name.strip().replace(" ", "_")
+    filename = f"{safe_name}_diet_plan.xlsx"
     try:
-        df = pd.read_csv("diet_history.csv")
-        st.dataframe(df)
+        df.to_excel(filename, index=False, engine="openpyxl")
+    except ImportError:
+        # Fallback to CSV if openpyxl not installed
+        filename = f"{safe_name}_diet_plan.csv"
+        df.to_csv(filename, index=False)
+    return filename
 
-        avg_ratings = df.groupby("meal")["rating"].mean().sort_values(ascending=False)
-        st.bar_chart(avg_ratings)
 
-        if doctor_name.strip():
-            st.markdown("### 📂 Export Options")
-            col1, col2 = st.columns(2)
+# ----------------------
+# Inside your Diet Tab (at the end after weekly summary)
+# ----------------------
+# Convert weekly diet plan into a DataFrame
+diet_data = []
+for day, meal in st.session_state.weekly_meals.items():
+    row = {
+        "Day": day,
+        "Meal": meal["name"],
+        "Calories": meal["nutrition"]["Calories"],
+        "Protein (g)": meal["nutrition"]["Protein"],
+        "Carbs (g)": meal["nutrition"]["Carbs"],
+        "Fat (g)": meal["nutrition"]["Fat"]
+    }
+    diet_data.append(row)
 
-            with col1:
-                if st.button("📥 Export to Excel"):
-                    file = export_excel(df, doctor_name.strip().replace(" ", "_"))
-                    st.success(f"✅ Excel file saved as {file}")
+df = pd.DataFrame(diet_data)
 
-            with col2:
-                if st.button("📄 Export to PDF"):
-                    file = export_pdf(df, doctor_name.strip().replace(" ", "_"))
-                    st.success(f"✅ PDF file saved as {file}")
+st.markdown("### 📥 Download Your Weekly Diet Plan")
+doctor_name = st.text_input("Enter your name (for the file name):", "MyDiet")
 
-        else:
-            st.info("ℹ️ Please enter your Doctor’s name to enable exports.")
+if st.button("Generate Diet Report"):
+    file = export_excel(df, doctor_name)
+    with open(file, "rb") as f:
+        st.download_button(
+            label="⬇️ Download Diet Report",
+            data=f,
+            file_name=file,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if file.endswith("xlsx") else "text/csv"
+        )
 
-    except FileNotFoundError:
         st.info("No ratings saved yet. Start rating meals to build your history!")
