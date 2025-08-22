@@ -66,6 +66,37 @@ tab0, tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "💉 Insulin", "🥗 Diet",
 # ===================================================== #
 # 📊 DASHBOARD
 # ===================================================== #
+    st.header("📊 Dashboard")
+
+    # Upload glucose log
+    uploaded_glucose = st.file_uploader("📤 Upload Glucose Log (CSV)", type=["csv"], key="upload_glucose")
+    if uploaded_glucose is not None:
+        glucose_df = pd.read_csv(uploaded_glucose)
+
+        # Ensure proper datetime handling
+        if "timestamp" in glucose_df.columns:
+            glucose_df["timestamp"] = pd.to_datetime(glucose_df["timestamp"])
+            glucose_df = glucose_df.sort_values("timestamp")
+
+            # Filter last 24 hours
+            last_24h = glucose_df[glucose_df["timestamp"] >= (pd.Timestamp.now() - pd.Timedelta(hours=24))]
+
+            if not last_24h.empty:
+                st.subheader("📈 Last 24 Hours Glucose Trend")
+
+                # Metrics
+                st.metric("Avg Glucose (mg/dL)", f"{last_24h['glucose'].mean():.1f}")
+                st.metric("Min Glucose (mg/dL)", f"{last_24h['glucose'].min():.1f}")
+                st.metric("Max Glucose (mg/dL)", f"{last_24h['glucose'].max():.1f}")
+                st.metric("Std Dev (mg/dL)", f"{last_24h['glucose'].std():.1f}")
+
+                # Line chart
+                st.line_chart(last_24h.set_index("timestamp")["glucose"])
+            else:
+                st.warning("⚠️ No data in last 24 hours found in file.")
+        else:
+            st.error("Uploaded file must contain a 'timestamp' column and 'glucose' column.")
+
 with tab0:
     st.header("📊 Dashboard Overview")
 
