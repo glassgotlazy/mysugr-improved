@@ -213,12 +213,10 @@ def get_user_key(key: str) -> str:
 # Get a unique history key for the user
 history_key = get_user_key("diet_history")
 
-# Check if the key exists in session_state
 if history_key in st.session_state and st.session_state[history_key]:
     df = st.session_state[history_key]
-    st.dataframe(df)
 else:
-    st.info("No diet history available yet. Start logging meals to build your history!")
+    df = pd.DataFrame(columns=["meal", "rating", "notes", "timestamp"])
 
 
 
