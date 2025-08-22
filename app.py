@@ -275,16 +275,21 @@ else:
         mime="text/csv"
     )
 
-    # Download Excel
-   csv_file = f"diet_history_{st.session_state['username']}.csv"
-df.to_csv(csv_file, index=False)
-st.download_button(
-    label="⬇️ Download Diet History (CSV)",
-    data=open(csv_file, "rb").read(),
-    file_name=csv_file,
-    mime="text/csv"
-)
+          # Show history
+        if not st.session_state[history_key].empty:
+            st.markdown("### 📜 Your Diet History")
+            st.dataframe(st.session_state[history_key])
 
+            # Export CSV
+            csv_file = f"diet_history_{st.session_state['username']}.csv"
+            st.session_state[history_key].to_csv(csv_file, index=False)
+            with open(csv_file, "rb") as f:
+                st.download_button(
+                    label="⬇️ Download Diet History (CSV)",
+                    data=f.read(),
+                    file_name=csv_file,
+                    mime="text/csv"
+                )
 
 # ------------------------
 # If logged in → Continue App
