@@ -85,29 +85,49 @@ with tabs[1]:
         if not diet_followed:
             st.text_input("❌ If not, what did you eat instead?")
 
-# -------------------------
-# Insulin Recommendations Tab
-# -------------------------
-with tabs[2]:
-    st.header("💉 Insulin Recommendations")
-    st.write("AI-assisted insulin dose guidance based on your blood sugar levels.")
+# ----------------------
+# 💉 Insulin Recommendation Tab
+# ----------------------
+with tabs[1]:
+    st.header("💉 Insulin Assistant")
 
-    try:
-        blood_sugar = st.number_input("Enter current blood sugar (mg/dL)", min_value=50, max_value=500, step=1)
-        carbs = st.number_input("Enter meal carbs (grams)", min_value=0, max_value=200, step=1)
-        insulin_sensitivity = st.slider("Insulin Sensitivity Factor (mg/dL per unit)", 10, 100, 50)
-        carb_ratio = st.slider("Carb Ratio (grams per unit insulin)", 5, 30, 15)
+    st.markdown("This tool helps you calculate your **meal-time insulin dose** based on your carbs and blood sugar levels.")
 
-        if st.button("💉 Get Recommendation"):
-            correction_dose = (blood_sugar - 120) / insulin_sensitivity if blood_sugar > 120 else 0
-            meal_dose = carbs / carb_ratio
-            total_dose = max(0, correction_dose + meal_dose)
+    # Inputs
+    col1, col2 = st.columns(2)
+    with col1:
+        carbs = st.number_input("🍞 Carbs in your meal (grams)", min_value=0, max_value=200, value=50)
+        carb_ratio = st.number_input("⚖️ Insulin-to-Carb Ratio (g/unit)", min_value=1, max_value=30, value=10)
+    with col2:
+        glucose = st.number_input("🩸 Current Blood Sugar (mg/dL)", min_value=50, max_value=400, value=150)
+        correction_factor = st.number_input("🔧 Correction Factor (mg/dL per unit)", min_value=10, max_value=100, value=50)
 
-            st.success(f"💉 Recommended insulin dose: **{total_dose:.1f} units**")
-            st.info(f"- Correction Dose: {correction_dose:.1f}\n- Meal Dose: {meal_dose:.1f}")
+    target_glucose = st.number_input("🎯 Target Blood Sugar (mg/dL)", min_value=80, max_value=150, value=110)
 
-    except Exception as e:
-        st.error(f"❌ Error in insulin recommendation: {e}")
+    # Calculations
+    carb_insulin = carbs / carb_ratio if carb_ratio else 0
+    correction_insulin = max((glucose - target_glucose) / correction_factor, 0) if correction_factor else 0
+    total_dose = round(carb_insulin + correction_insulin, 1)
+
+    # Results
+    st.subheader("📊 Insulin Dose Recommendation")
+    st.metric("Carb Coverage", f"{carb_insulin:.1f} units")
+    st.metric("Correction Dose", f"{correction_insulin:.1f} units")
+    st.metric("✅ Total Recommended Dose", f"{total_dose:.1f} units")
+
+    # Visualization
+    st.markdown("### 📉 Dose Breakdown")
+    st.progress(min(int((total_dose/20)*100), 100))  # progress bar out of 20 units
+    st.bar_chart(
+        pd.DataFrame(
+            {"Insulin Units": [carb_insulin, correction_insulin]},
+            index=["Carb Coverage", "Correction"]
+        )
+    )
+
+    # Notes
+    st.markdown("💡 **Note:** This is a helper tool, not medical advice. Always confirm with your doctor before making insulin adjustments.")
+
 
 import streamlit as st
 import random
