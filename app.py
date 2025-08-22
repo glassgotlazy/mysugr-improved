@@ -1,227 +1,174 @@
 import streamlit as st
 import pandas as pd
+import datetime
 import os
-import plotly.express as px
-import random
-from datetime import datetime
 
-# ------------------------
-# Page Config
-# ------------------------
-st.set_page_config(
-    page_title="MySugr Improved",
-    page_icon="💉",
-    layout="wide"
-)
-
-# ------------------------
-# User Authentication Utils
-# ------------------------
-USER_FILE = "users.csv"
-
-def load_users():
-    if os.path.exists(USER_FILE):
-        return pd.read_csv(USER_FILE)
-    return pd.DataFrame(columns=["username", "password"])
-
-def save_user(username, password):
-    users = load_users()
-    if username in users["username"].values:
-        return False  # User already exists
-    users = pd.concat([users, pd.DataFrame([[username, password]], columns=["username", "password"])], ignore_index=True)
-    users.to_csv(USER_FILE, index=False)
-    return True
-
-def check_login(username, password):
-    users = load_users()
-    match = users[(users["username"] == username) & (users["password"] == password)]
-    return not match.empty
-
-# ------------------------
-# Session State Init
-# ------------------------
+# ---------------- Session & Auth ---------------- #
+if "users" not in st.session_state:
+    st.session_state["users"] = {}  # username -> password
 if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+    st.session_state["logged_in"] = False
 if "username" not in st.session_state:
-    st.session_state.username = None
+    st.session_state["username"] = None
 
-# ------------------------
-# Login / Signup Pages
-# ------------------------
-if not st.session_state.logged_in:
-    st.title("🔐 Welcome to MySugr Improved")
 
-    auth_choice = st.radio("Select Action", ["Login", "Sign Up"], key="auth_choice")
+def login(username, password):
+    if username in st.session_state["users"] and st.session_state["users"][username] == password:
+        st.session_state["logged_in"] = True
+        st.session_state["username"] = username
+        return True
+    return False
+
+
+def signup(username, password):
+    if username not in st.session_state["users"]:
+        st.session_state["users"][username] = password
+        return True
+    return False
+
+
+def get_user_key(suffix):
+    """Generate session-specific key for each user"""
+    return f"{st.session_state['username']}_{suffix}"
+
+
+# ---------------- Login / Signup Page ---------------- #
+if not st.session_state["logged_in"]:
+    st.title("🔐 Login / Signup")
+
+    auth_choice = st.radio("Choose action:", ["Login", "Signup"])
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
 
     if auth_choice == "Login":
-        st.subheader("Login to your account")
-        username = st.text_input("Username", key="login_username")
-        password = st.text_input("Password", type="password", key="login_password")
-        if st.button("Login", key="login_button"):
-            if check_login(username, password):
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.success(f"✅ Welcome back, {username}!")
+        if st.button("Login"):
+            if login(username, password):
+                st.success("Logged in successfully ✅")
                 st.rerun()
             else:
-                st.error("❌ Invalid username or password")
-
-    else:  # Signup
-        st.subheader("Create a new account")
-        new_username = st.text_input("Choose a username", key="signup_username")
-        new_password = st.text_input("Choose a password", type="password", key="signup_password")
-        if st.button("Sign Up", key="signup_button"):
-            if save_user(new_username, new_password):
-                st.success("🎉 Account created! Please log in.")
+                st.error("Invalid credentials ❌")
+    else:
+        if st.button("Signup"):
+            if signup(username, password):
+                st.success("Account created 🎉 Please login.")
             else:
-                st.error("⚠️ Username already exists. Try a different one.")
-
+                st.error("Username already exists ❌")
     st.stop()
 
-# ------------------------
-# If logged in → Continue App
-# ------------------------
-if st.sidebar.button("Logout", key="logout_button_sidebar"):
-    st.session_state.clear()
+# ---------------- Sidebar ---------------- #
+st.sidebar.title(f"👋 Welcome, {st.session_state['username']}")
+if st.sidebar.button("Logout"):
     st.session_state["logged_in"] = False
-    st.experimental_rerun()
+    st.session_state["username"] = None
+    st.rerun()
 
-# ------------------------
-# Tabs Layout (ONLY ONCE)
-# ------------------------
-tabs = st.tabs([
-    "📊 Dashboard",
-    "🥗 Diet Tracking",
-    "💉 Insulin Recommendations",
-    "🍎 Diet Recommendations"
-])
+# ---------------- Tabs ---------------- #
+tab1, tab2, tab3 = st.tabs(["💉 Insulin", "🥗 Diet", "📊 Weekly Summary"])
 
-# -------------------------
-# Dashboard Tab
-# -------------------------
-with tabs[0]:
-    st.header("📊 Dashboard")
-    uploaded_file = st.file_uploader("📂 Upload your CSV file", type="csv", key="dashboard_file_uploader")
+# ===================================================== #
+# 💉 INSULIN TAB
+# ===================================================== #
+with tab1:
+    st.header("💉 Insulin Dose Calculator")
 
-    if uploaded_file:
-        try:
-            df = pd.read_csv(uploaded_file)
-            df.columns = df.columns.str.strip().str.lower()
+    carbs = st.number_input("Carbohydrates (grams)", min_value=0, step=1)
+    current_bg = st.number_input("Current Blood Glucose (mg/dL)", min_value=0, step=1)
+    target_bg = st.number_input("Target Blood Glucose (mg/dL)", min_value=80, value=110, step=1)
+    carb_ratio = st.number_input("Insulin-to-Carb Ratio (g/unit)", min_value=1, value=15, step=1)
+    correction_factor = st.number_input("Correction Factor (mg/dL/unit)", min_value=10, value=50, step=1)
 
-            if "date" in df.columns and "time" in df.columns:
-                df["datetime"] = pd.to_datetime(df["date"] + " " + df["time"], errors="coerce")
-            elif "datetime" in df.columns:
-                df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
-            else:
-                st.error("❌ No 'datetime' column found.")
-                st.stop()
+    if st.button("Calculate Insulin Dose"):
+        carb_insulin = carbs / carb_ratio if carb_ratio > 0 else 0
+        correction_insulin = (current_bg - target_bg) / correction_factor if current_bg > target_bg else 0
+        total_dose = carb_insulin + correction_insulin
 
-            st.success("✅ File uploaded successfully!")
-            st.dataframe(df.head())
+        st.subheader("📊 Insulin Dose Recommendation")
+        st.metric("Carb Coverage", f"{carb_insulin:.1f} units")
+        st.metric("Correction Dose", f"{correction_insulin:.1f} units")
+        st.metric("✅ Total Recommended Dose", f"{total_dose:.1f} units")
 
-            if "blood sugar measurement (mg/dl)" in df.columns:
-                fig = px.line(df, x="datetime", y="blood sugar measurement (mg/dl)", title="Blood Sugar Over Time")
-                st.plotly_chart(fig, use_container_width=True)
+        st.markdown("### 📉 Dose Breakdown")
+        st.progress(min(int((total_dose / 20) * 100), 100))
+        st.bar_chart(
+            pd.DataFrame({"Insulin Units": [carb_insulin, correction_insulin]},
+                         index=["Carb Coverage", "Correction"])
+        )
 
-            insulin_cols = [col for col in df.columns if "insulin" in col]
-            if insulin_cols:
-                for col in insulin_cols:
-                    fig = px.line(df, x="datetime", y=col, title=f"{col.title()} Over Time")
-                    st.plotly_chart(fig, use_container_width=True)
+# ===================================================== #
+# 🥗 DIET TAB
+# ===================================================== #
+with tab2:
+    st.header("🥗 Diet Planner")
 
-        except Exception as e:
-            st.error(f"❌ Error processing file: {e}")
-    else:
-        st.info("Upload a CSV file to see your dashboard.")
+    # Example diet plans with images
+    diet_plans = {
+        "Breakfast": [
+            ("Oatmeal with fruits", "https://i.imgur.com/1O4iN5c.jpg"),
+            ("Vegetable omelette", "https://i.imgur.com/Ht6p8Qq.jpg"),
+            ("Greek yogurt with honey", "https://i.imgur.com/TSJ0A9Z.jpg"),
+        ],
+        "Lunch": [
+            ("Grilled chicken with salad", "https://i.imgur.com/jh5N8x7.jpg"),
+            ("Brown rice with dal & veggies", "https://i.imgur.com/UKxjxnT.jpg"),
+            ("Paneer wrap", "https://i.imgur.com/9LZxO7Q.jpg"),
+        ],
+        "Dinner": [
+            ("Baked salmon with veggies", "https://i.imgur.com/G2X8Z6H.jpg"),
+            ("Whole wheat roti with sabzi", "https://i.imgur.com/kN4F0uQ.jpg"),
+            ("Soup with whole grain bread", "https://i.imgur.com/ct7V9kW.jpg"),
+        ],
+    }
 
-# -------------------------
-# Diet Tracking Tab
-# -------------------------
-with tabs[1]:
-    st.header("🥗 Diet Tracking")
-    st.write("Keep track of whether you followed your diet plan today.")
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        diet_followed = st.checkbox("✅ Did you follow your diet today?", key="diet_followed_checkbox")
-    with col2:
-        if not diet_followed:
-            st.text_input("❌ If not, what did you eat instead?", key="diet_not_followed_input")
+    history_key = get_user_key("diet_history")
+    if history_key not in st.session_state:
+        st.session_state[history_key] = pd.DataFrame(
+            columns=["meal", "rating", "notes", "timestamp"]
+        )
 
-# -------------------------
-# Insulin Recommendation Tab
-# -------------------------
-with tabs[2]:
-    st.header("💉 Insulin Assistant")
-    st.markdown("This tool helps you calculate your **meal-time insulin dose** based on your carbs and blood sugar levels.")
+    for category, meals in diet_plans.items():
+        st.subheader(category)
+        cols = st.columns(len(meals))
+        for idx, (meal, img) in enumerate(meals):
+            with cols[idx]:
+                st.image(img, caption=meal, use_container_width=True)
+                rating = st.slider(f"Rate {meal}", 1, 5, 3, key=f"{category}_{meal}_rating")
+                notes = st.text_input(f"Notes for {meal}", key=f"{category}_{meal}_notes")
+                if st.button(f"Save {meal}", key=f"{category}_{meal}_save"):
+                    new_entry = {
+                        "meal": meal,
+                        "rating": rating,
+                        "notes": notes,
+                        "timestamp": datetime.datetime.now()
+                    }
+                    st.session_state[history_key] = pd.concat(
+                        [st.session_state[history_key], pd.DataFrame([new_entry])],
+                        ignore_index=True
+                    )
+                    st.success(f"Saved {meal} ✅")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        carbs = st.number_input("🍞 Carbs in your meal (grams)", min_value=0, max_value=200, value=50, key="carbs_input")
-        carb_ratio = st.number_input("⚖️ Insulin-to-Carb Ratio (g/unit)", min_value=1, max_value=30, value=10, key="carb_ratio_input")
-    with col2:
-        glucose = st.number_input("🩸 Current Blood Sugar (mg/dL)", min_value=50, max_value=400, value=150, key="glucose_input")
-        correction_factor = st.number_input("🔧 Correction Factor (mg/dL per unit)", min_value=10, max_value=100, value=50, key="correction_factor_input")
-
-    target_glucose = st.number_input("🎯 Target Blood Sugar (mg/dL)", min_value=80, max_value=150, value=110, key="target_glucose_input")
-
-    carb_insulin = carbs / carb_ratio if carb_ratio else 0
-    correction_insulin = max((glucose - target_glucose) / correction_factor, 0) if correction_factor else 0
-    total_dose = round(carb_insulin + correction_insulin, 1)
-
-    st.subheader("📊 Insulin Dose Recommendation")
-    st.metric("Carb Coverage", f"{carb_insulin:.1f} units", key="carb_metric")
-    st.metric("Correction Dose", f"{correction_insulin:.1f} units", key="correction_metric")
-    st.metric("✅ Total Recommended Dose", f"{total_dose:.1f} units", key="total_metric")
-
-    st.markdown("### 📉 Dose Breakdown")
-    st.progress(min(int((total_dose/20)*100), 100))
-    st.bar_chart(pd.DataFrame({"Insulin Units": [carb_insulin, correction_insulin]}, index=["Carb Coverage", "Correction"]))
-
-    st.markdown("💡 **Note:** This is a helper tool, not medical advice. Always confirm with your doctor before making insulin adjustments.")
-
-# -------------------------
-# Diet Recommendation Tab
-# -------------------------
-with tabs[3]:
-    st.header("🍎 Diet Recommendations")
-    st.write("Get personalized diet suggestions and track meal satisfaction.")
-
-    meals = [
-        "Grilled chicken with quinoa and vegetables",
-        "Salmon with brown rice and steamed broccoli",
-        "Tofu stir-fry with mixed veggies",
-        "Lentil soup with whole-grain bread",
-        "Egg omelet with spinach and avocado"
-    ]
-    suggestion = random.choice(meals)
-    st.subheader("👉 Today's Meal Suggestion:")
-    st.success(suggestion)
-
-    # Per-user diet history file
-    csv_file = f"diet_history_{st.session_state['username']}.csv"
-
-    # Load existing history
-    if os.path.exists(csv_file):
-        df = pd.read_csv(csv_file)
-    else:
-        df = pd.DataFrame(columns=["meal", "rating", "notes", "timestamp"])
-
-    st.markdown("### 📝 Rate Your Meal")
-    meal_choice = st.text_input("Meal you ate", value=suggestion, key="meal_choice_input")
-    rating = st.slider("How satisfied are you with your meal?", 1, 5, 3, key="meal_rating_slider")
-    notes = st.text_area("Additional notes", key="meal_notes_area")
-
-    if st.button("Save Feedback", key="save_feedback_button"):
-        new_entry = {
-            "meal": meal_choice,
-            "rating": rating,
-            "notes": notes,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-        df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
-        df.to_csv(csv_file, index=False)
-        st.success("✅ Feedback saved!")
+    st.subheader("📜 Diet History")
+    df = st.session_state[history_key]
+    st.dataframe(df)
 
     if not df.empty:
-        st.markdown("### 📖 Meal History")
-        st.dataframe(df.tail(10))
+        csv_file = f"diet_history_{st.session_state['username']}.csv"
+        df.to_csv(csv_file, index=False)
+        with open(csv_file, "rb") as f:
+            st.download_button("📥 Download Diet History (CSV)", f, file_name=csv_file)
+
+# ===================================================== #
+# 📊 WEEKLY SUMMARY TAB
+# ===================================================== #
+with tab3:
+    st.header("📊 Weekly Summary")
+
+    history_key = get_user_key("diet_history")
+    if history_key in st.session_state and not st.session_state[history_key].empty:
+        df = st.session_state[history_key]
+        df["day"] = pd.to_datetime(df["timestamp"]).dt.day_name()
+
+        weekly_totals = df.groupby("day")["rating"].mean()
+        st.bar_chart(weekly_totals)
+    else:
+        st.info("No history found for this week.")
