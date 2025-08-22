@@ -81,11 +81,11 @@ if not st.session_state.logged_in:
 # ------------------------
 # If logged in → Continue App
 # ------------------------
-st.sidebar.success(f"👤 Logged in as {st.session_state.username}")
-if st.sidebar.button("Logout"):
-    st.session_state.logged_in = False
-    st.session_state.username = None
-    st.rerun()
+if st.sidebar.button("Logout", key="logout_button"):
+    st.session_state.clear()
+    st.session_state["logged_in"] = False
+    st.experimental_rerun()
+
 
 # ------------------------
 # Tabs Layout (ONLY ONCE)
