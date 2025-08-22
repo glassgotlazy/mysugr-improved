@@ -1,20 +1,82 @@
-# ------------------------
-# Imports
-# ------------------------
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import random
-from datetime import datetime
+import os
 
 # ------------------------
-# Session State for Login
+# User Authentication Utils
+# ------------------------
+USER_FILE = "users.csv"
+
+def load_users():
+    if os.path.exists(USER_FILE):
+        return pd.read_csv(USER_FILE)
+    return pd.DataFrame(columns=["username", "password"])
+
+def save_user(username, password):
+    users = load_users()
+    if username in users["username"].values:
+        return False  # User already exists
+    users = pd.concat([users, pd.DataFrame([[username, password]], columns=["username", "password"])], ignore_index=True)
+    users.to_csv(USER_FILE, index=False)
+    return True
+
+def check_login(username, password):
+    users = load_users()
+    match = users[(users["username"] == username) & (users["password"] == password)]
+    return not match.empty
+
+
+# ------------------------
+# Session State
 # ------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = None
 
-if "weekly_meals" not in st.session_state:
-    st.session_state.weekly_meals = {}
+
+# ------------------------
+# Login / Signup Pages
+# ------------------------
+if not st.session_state.logged_in:
+    st.title("🔐 Welcome to MySugr Improved")
+
+    auth_choice = st.radio("Select Action", ["Login", "Sign Up"])
+
+    if auth_choice == "Login":
+        st.subheader("Login to your account")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.button("Login"):
+            if check_login(username, password):
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.success(f"✅ Welcome back, {username}!")
+                st.rerun()
+            else:
+                st.error("❌ Invalid username or password")
+
+    else:  # Signup
+        st.subheader("Create a new account")
+        new_username = st.text_input("Choose a username")
+        new_password = st.text_input("Choose a password", type="password")
+        if st.button("Sign Up"):
+            if save_user(new_username, new_password):
+                st.success("🎉 Account created! Please log in.")
+            else:
+                st.error("⚠️ Username already exists. Try a different one.")
+
+    st.stop()  # Prevents the rest of the app from running until logged in
+
+# ------------------------
+# If logged in → Continue App
+# ------------------------
+st.sidebar.success(f"👤 Logged in as {st.session_state.username}")
+if st.sidebar.button("Logout"):
+    st.session_state.logged_in = False
+    st.session_state.username = None
+    st.rerun()
+
 
 # ------------------------
 # App Layout
