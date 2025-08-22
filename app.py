@@ -210,9 +210,10 @@ def get_user_key(key: str) -> str:
     return key
 
 
-# Get a unique history key for the user
+# Generate user-specific diet history key
 history_key = get_user_key("diet_history")
 
+# Check if history exists for this user
 if history_key in st.session_state and st.session_state[history_key]:
     df = st.session_state[history_key]
 else:
