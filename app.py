@@ -199,8 +199,21 @@ st.set_page_config(
 # ----------------------
 # User-specific Diet History
 # ----------------------
+# ----------------------
+# Utility Functions
+# ----------------------
+
 def get_user_key(key: str) -> str:
-    """Generate session
+    """Generate session-specific key for each user."""
+    if "username" in st.session_state:
+        return f"{st.session_state['username']}_{key}"
+    return key
+
+
+def get_history_key() -> str:
+    """Get the diet history key for the logged-in user."""
+    return get_user_key("diet_history")
+
 
 
 def save_meal_to_history(day, meal, rating, note):
