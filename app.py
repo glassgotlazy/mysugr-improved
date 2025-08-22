@@ -554,10 +554,18 @@ summary_cols = st.columns(4)
 for i, (k, v) in enumerate(weekly_totals.items()):
     summary_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
 
-# Save diet history per user
-history_key = get_user_key("diet_history")
-if history_key not in st.session_state:
-    st.session_state[history_key] = []
+# Export diet history as CSV (per user)
+if not df.empty:
+    csv_file = f"diet_history_{st.session_state['username']}.csv"
+    df.to_csv(csv_file, index=False)
+
+    with open(csv_file, "rb") as f:
+        st.download_button(
+            label="⬇️ Download Diet History (CSV)",
+            data=f.read(),
+            file_name=csv_file,
+            mime="text/csv"
+        )
 
 if st.button("💾 Save This Week's Plan"):
     for day in days:
