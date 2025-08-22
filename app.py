@@ -276,15 +276,14 @@ else:
     )
 
     # Download Excel
-    excel_file = f"diet_history_{st.session_state.username}.xlsx"
-    df.to_excel(excel_file, index=False)
-    with open(excel_file, "rb") as f:
-        st.download_button(
-            "⬇️ Download Diet History (Excel)",
-            f,
-            file_name=excel_file,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+   csv_file = f"diet_history_{st.session_state['username']}.csv"
+df.to_csv(csv_file, index=False)
+st.download_button(
+    label="⬇️ Download Diet History (CSV)",
+    data=open(csv_file, "rb").read(),
+    file_name=csv_file,
+    mime="text/csv"
+)
 
 
 # ------------------------
