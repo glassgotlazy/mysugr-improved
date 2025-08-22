@@ -365,16 +365,23 @@ with tabs[2]:
 
     st.markdown("💡 **Note:** This is a helper tool, not medical advice. Always confirm with your doctor before making insulin adjustments.")
 
-import streamlit as st
-import random
-import pandas as pd
-from datetime import datetime
+# ----------------------
+# Helpers for user-specific session state
+# ----------------------
+def get_user_key(base_key: str) -> str:
+    """Generate a unique key for the logged-in user."""
+    username = st.session_state.get("username", "guest")
+    return f"{base_key}_{username}"
+
 
 # ----------------------
-# Meals categorized with nutrition + images
+# Diet Tab
 # ----------------------
+import pandas as pd
+import random
+
 meals = {
- "Breakfast": [
+"Breakfast": [
             {"name": "Oatmeal with Fruits",
              "img": "https://www.pcrm.org/sites/default/files/Oatmeal%20and%20Berries.jpg",
              "nutrition": {"Calories": 250, "Protein": 8, "Carbs": 45, "Fat": 5}},
@@ -439,61 +446,64 @@ days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sun
 categories = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
 # ----------------------
-# USER-STATE HELPERS
+# Session state setup
 # ----------------------
-def get_user_key(key: str):
-    """Prefix session state keys with username to isolate per user."""
-    return f"{st.session_state.username}_{key}" if "username" in st.session_state else key
-
-def init_user_state():
-    """Initialize user-specific state safely."""
-    if "username" not in st.session_state or not st.session_state.username:
-        return
-    user_key = get_user_key("weekly_meals")
-    if user_key not in st.session_state:
-        st.session_state[user_key] = {
-            d: random.choice(meals[categories[i % len(categories)]])
-            for i, d in enumerate(days)
-        }
+weekly_key = get_user_key("weekly_meals")
+if weekly_key not in st.session_state:
+    st.session_state[weekly_key] = {}
+    for i, day in enumerate(days):
+        category = categories[i % len(categories)]
+        st.session_state[weekly_key][day] = random.choice(meals[category])
 
 # ----------------------
-# Main Diet Tab
+# Diet Plan UI
 # ----------------------
 st.title("🍽️ Auto-Balanced Weekly Diet Plan")
 
-# Initialize per-user data
-init_user_state()
-user_weekly_meals = st.session_state[get_user_key("weekly_meals")]
-
-# Track weekly totals
 weekly_totals = {"Calories": 0, "Protein": 0, "Carbs": 0, "Fat": 0}
 
 for day in days:
-    meal = user_weekly_meals[day]
+    meal = st.session_state[weekly_key][day]
     st.subheader(f"{day} → {meal['name']}")
     st.image(meal["img"], caption=meal["name"], width=300)
 
     # Nutrition breakdown
-    st.markdown("**📊 Nutrition Breakdown:**")
     cols = st.columns(4)
     for i, (k, v) in enumerate(meal["nutrition"].items()):
         cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
         weekly_totals[k] += v
 
     # Replace option
-    if st.button(f"🔄 Change {day}", key=f"change_{day}_{st.session_state.username}"):
+    if st.button(f"🔄 Change {day}"):
         for cat, meal_list in meals.items():
             if meal in meal_list:
-                user_weekly_meals[day] = random.choice(meal_list)
+                st.session_state[weekly_key][day] = random.choice(meal_list)
         st.rerun()
 
     # Rating + Notes
-    st.slider(f"⭐ Rate {meal['name']}", 1, 5, 3, key=f"rating_{day}_{st.session_state.username}")
-    st.text_area(f"📝 Notes for {meal['name']}", key=f"note_{day}_{st.session_state.username}")
+    st.slider(f"⭐ Rate {meal['name']}", 1, 5, 3, key=f"rating_{day}_{st.session_state.get('username', 'guest')}")
+    st.text_area(f"📝 Notes for {meal['name']}", key=f"note_{day}_{st.session_state.get('username', 'guest')}")
     st.write("---")
 
-# 📊 Weekly Summary
+# ----------------------
+# Weekly Summary
+# ----------------------
 st.subheader("📅 Weekly Nutrition Summary")
 summary_cols = st.columns(4)
 for i, (k, v) in enumerate(weekly_totals.items()):
     summary_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
+
+# ----------------------
+# Diet History
+# ----------------------
+history_key = get_user_key("diet_history")
+
+if history_key in st.session_state and st.session_state[history_key]:
+    df = pd.DataFrame(st.session_state[history_key])
+    st.markdown("### 📊 Your Meal Rating History")
+    st.dataframe(df)
+    avg_ratings = df.groupby("meal")["rating"].mean().sort_values(ascending=False)
+    st.bar_chart(avg_ratings)
+else:
+    st.info("No ratings saved yet. Start rating meals to build your history!")
+
