@@ -132,6 +132,13 @@ with tabs[2]:
 
 # ----------------------
 # Meals categorized with nutrition (extended with more options)
+import random
+import streamlit as st
+
+# ✅ Define days at top-level (no indent!)
+days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+# ✅ Define meals at top-level (no indent!)
 meals = {
     "Breakfast": [
         {"name": "Oatmeal with Fruits",
@@ -149,6 +156,10 @@ meals = {
         {"name": "Vegetable Upma",
          "img": "https://www.indianhealthyrecipes.com/wp-content/uploads/2019/08/upma-recipe-500x500.jpg",
          "nutrition": {"Calories": 280, "Protein": 8, "Carbs": 48, "Fat": 7}},
+    ],
+    # ... keep the rest of the categories (Lunch, Dinner, Snack)
+}
+7}},
     ],
     "Lunch": [
         {"name": "Grilled Chicken Salad",
@@ -195,7 +206,6 @@ meals = {
 }
 
 
-    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
     if "weekly_meals" not in st.session_state:
         st.session_state.weekly_meals = {}
