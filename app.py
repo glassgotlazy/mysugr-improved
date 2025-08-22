@@ -240,7 +240,7 @@ with tabs[3]:
 
     # Meals categorized with nutrition + real images
     meals = {
-        "Breakfast": [
+"Breakfast": [
             {"name": "Oatmeal with Fruits",
              "img": "https://www.pcrm.org/sites/default/files/Oatmeal%20and%20Berries.jpg",
              "nutrition": {"Calories": 250, "Protein": 8, "Carbs": 45, "Fat": 5}},
@@ -300,25 +300,31 @@ with tabs[3]:
              "nutrition": {"Calories": 170, "Protein": 9, "Carbs": 30, "Fat": 4}},
         ]
     }
+    days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+    categories = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
-    # Initialize weekly meals if not already set
-    if "weekly_meals" not in st.session_state:
-        st.session_state.weekly_meals = {}
-        for i, day in enumerate(days):
-            category = categories[i % len(categories)]
-            st.session_state.weekly_meals[day] = random.choice(meals[category])
+    # --- SAFE INIT / HEAL weekly_meals ---
+    def _pick(day_index: int):
+        category = categories[day_index % len(categories)]
+        return random.choice(meals[category])
 
-    # Title
-    st.title("🍽️ Auto-Balanced Weekly Diet Plan")
+    if "weekly_meals" not in st.session_state or not isinstance(st.session_state.weekly_meals, dict):
+        st.session_state.weekly_meals = {d: _pick(i) for i, d in enumerate(days)}
+    else:
+        for i, d in enumerate(days):
+            entry = st.session_state.weekly_meals.get(d)
+            if not isinstance(entry, dict) or "name" not in entry or "nutrition" not in entry or "img" not in entry:
+                st.session_state.weekly_meals[d] = _pick(i)
 
     # Track weekly totals
     weekly_totals = {"Calories": 0, "Protein": 0, "Carbs": 0, "Fat": 0}
 
-    # Display meals in table format
-    for day in days:
+    # Show each day
+    for i, day in enumerate(days):
         meal = st.session_state.weekly_meals[day]
+
         st.markdown(f"### {day}")
-        cols = st.columns([2, 1, 2])  # Left text, image small, nutrition
+        cols = st.columns([2, 1, 2])
 
         with cols[0]:
             st.subheader(meal["name"])
@@ -337,17 +343,14 @@ with tabs[3]:
             weekly_totals[k] += v
 
         # Replace option
-        if st.button(f"🔄 Change {day}"):
-            for cat, meal_list in meals.items():
-                if meal in meal_list:
-                    st.session_state.weekly_meals[day] = random.choice(meal_list)
+        if st.button(f"🔄 Change {day}", key=f"change_{day}"):
+            st.session_state.weekly_meals[day] = _pick(i)
             st.rerun()
 
         st.markdown("---")
 
-    # 📊 Weekly Nutrition Summary
+    # 📊 Weekly Summary
     st.subheader("📅 Weekly Nutrition Summary")
     summary_cols = st.columns(4)
     for i, (k, v) in enumerate(weekly_totals.items()):
         summary_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
-
