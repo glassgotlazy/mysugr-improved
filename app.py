@@ -109,69 +109,52 @@ with tabs[2]:
     except Exception as e:
         st.error(f"❌ Error in insulin recommendation: {e}")
 
-import random
-import streamlit as st
-
-import streamlit as st
-import random
-
-# ----------------------
-import streamlit as st
-import random
-
-# ----------------------
 import streamlit as st
 import random
 import pandas as pd
 from datetime import datetime
 
 # ----------------------
-import random
-import streamlit as st
-
-import random
-import streamlit as st
-
 # Meals categorized with nutrition
 meals = {
     "Breakfast": [
-        {"name": "Oatmeal with Fruits", 
+        {"name": "Oatmeal with Fruits",
          "img": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd",
          "nutrition": {"Calories": 250, "Protein": 8, "Carbs": 45, "Fat": 5}},
-        {"name": "Avocado Toast", 
+        {"name": "Avocado Toast",
          "img": "https://images.unsplash.com/photo-1551183053-bf91a1d81141",
          "nutrition": {"Calories": 300, "Protein": 10, "Carbs": 30, "Fat": 12}},
-        {"name": "Smoothie Bowl", 
+        {"name": "Smoothie Bowl",
          "img": "https://images.unsplash.com/photo-1505253216365-4f5b2b9d5d99",
          "nutrition": {"Calories": 280, "Protein": 9, "Carbs": 40, "Fat": 7}},
     ],
     "Lunch": [
-        {"name": "Grilled Chicken Salad", 
+        {"name": "Grilled Chicken Salad",
          "img": "https://images.unsplash.com/photo-1568605114967-8130f3a36994",
          "nutrition": {"Calories": 400, "Protein": 35, "Carbs": 20, "Fat": 15}},
-        {"name": "Quinoa Bowl", 
+        {"name": "Quinoa Bowl",
          "img": "https://images.unsplash.com/photo-1604909053369-f06d9f9a1f8e",
          "nutrition": {"Calories": 420, "Protein": 18, "Carbs": 55, "Fat": 12}},
     ],
     "Dinner": [
-        {"name": "Baked Salmon with Veggies", 
+        {"name": "Baked Salmon with Veggies",
          "img": "https://images.unsplash.com/photo-1589923188900-3f4e1f3edbe0",
          "nutrition": {"Calories": 500, "Protein": 40, "Carbs": 25, "Fat": 22}},
-        {"name": "Veggie Stir Fry", 
+        {"name": "Veggie Stir Fry",
          "img": "https://images.unsplash.com/photo-1589927986089-3581237894ef",
          "nutrition": {"Calories": 350, "Protein": 12, "Carbs": 50, "Fat": 10}},
     ],
     "Snack": [
-        {"name": "Greek Yogurt with Honey", 
+        {"name": "Greek Yogurt with Honey",
          "img": "https://images.unsplash.com/photo-1588361861125-d3a1a0b5e3cb",
          "nutrition": {"Calories": 180, "Protein": 12, "Carbs": 20, "Fat": 4}},
-        {"name": "Mixed Nuts", 
+        {"name": "Mixed Nuts",
          "img": "https://images.unsplash.com/photo-1604908554266-95c0d37db114",
          "nutrition": {"Calories": 200, "Protein": 6, "Carbs": 8, "Fat": 18}},
     ]
 }
 
-days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
+days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 categories = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
 # Rotate through meals
@@ -181,49 +164,58 @@ if "weekly_meals" not in st.session_state:
         category = categories[i % len(categories)]
         st.session_state.weekly_meals[day] = random.choice(meals[category])
 
-# UI
-st.title("🍽️ Auto-Balanced Weekly Diet Plan")
+# ----------------------
+# Tabs
+# ----------------------
+diet_tabs = st.tabs(["🍽️ Weekly Diet Plan", "📊 Diet History"])
 
-# Track weekly totals
-weekly_totals = {"Calories": 0, "Protein": 0, "Carbs": 0, "Fat": 0}
+# ----------------------
+# Diet Plan Tab
+# ----------------------
+with diet_tabs[0]:
+    st.title("🍽️ Auto-Balanced Weekly Diet Plan")
 
-for day in days:
-    meal = st.session_state.weekly_meals[day]
-    st.subheader(f"{day} → {meal['name']}")
-    st.image(meal["img"], caption=meal["name"], use_container_width=True)
+    # Track weekly totals
+    weekly_totals = {"Calories": 0, "Protein": 0, "Carbs": 0, "Fat": 0}
 
-    # Nutrition breakdown
-    st.markdown("**📊 Nutrition Breakdown:**")
-    cols = st.columns(4)
-    for i, (k, v) in enumerate(meal["nutrition"].items()):
-        cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
+    for day in days:
+        meal = st.session_state.weekly_meals[day]
+        st.subheader(f"{day} → {meal['name']}")
 
-        # Add to weekly totals
-        weekly_totals[k] += v
+        # Smaller image
+        st.image(meal["img"], caption=meal["name"], width=250)
 
-    # Replace option
-    if st.button(f"🔄 Change {day}"):
-        for cat, meal_list in meals.items():
-            if meal in meal_list:
-                st.session_state.weekly_meals[day] = random.choice(meal_list)
-        st.rerun()
+        # Nutrition breakdown
+        st.markdown("**📊 Nutrition Breakdown:**")
+        cols = st.columns(4)
+        for i, (k, v) in enumerate(meal["nutrition"].items()):
+            cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
 
-    # Rating + Notes
-    st.slider(f"⭐ Rate {meal['name']}", 1, 5, 3, key=f"rating_{day}")
-    st.text_area(f"📝 Notes for {meal['name']}", key=f"note_{day}")
-    st.write("---")
+            # Add to weekly totals
+            weekly_totals[k] += v
 
-# 📊 Weekly Summary
-st.subheader("📅 Weekly Nutrition Summary")
-summary_cols = st.columns(4)
-for i, (k, v) in enumerate(weekly_totals.items()):
-    summary_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
+        # Replace option
+        if st.button(f"🔄 Change {day}"):
+            for cat, meal_list in meals.items():
+                if meal in meal_list:
+                    st.session_state.weekly_meals[day] = random.choice(meal_list)
+            st.rerun()
 
+        # Rating + Notes
+        st.slider(f"⭐ Rate {meal['name']}", 1, 5, 3, key=f"rating_{day}")
+        st.text_area(f"📝 Notes for {meal['name']}", key=f"note_{day}")
+        st.write("---")
+
+    # 📊 Weekly Summary
+    st.subheader("📅 Weekly Nutrition Summary")
+    summary_cols = st.columns(4)
+    for i, (k, v) in enumerate(weekly_totals.items()):
+        summary_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
 
 # ----------------------
 # Diet History Tab
 # ----------------------
-with diet_tabs[-1]:
+with diet_tabs[1]:
     st.markdown("### 📊 Your Meal Rating History")
     try:
         df = pd.read_csv("diet_history.csv")
@@ -232,6 +224,7 @@ with diet_tabs[-1]:
         st.bar_chart(avg_ratings)
     except FileNotFoundError:
         st.info("No ratings saved yet. Start rating meals to build your history!")
+
 
 import streamlit as st
 import pandas as pd
