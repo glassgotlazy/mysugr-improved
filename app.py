@@ -145,9 +145,14 @@ def main_app():
     if st.button("🚪 Logout"):
         st.session_state.clear()
         st.experimental_rerun()
-    def run_app():
-if "username" not in st.session_state:   # ❌ not indented
-    login()
+
+
+# ---------------- Run App ----------------
+def run_app():
+    if "username" not in st.session_state:
+        login()
+    else:
+        main_app()
 
 
 if __name__ == "__main__":
