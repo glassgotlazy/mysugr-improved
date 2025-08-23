@@ -5,19 +5,19 @@ from datetime import datetime
 
 # ---------------- Utility ----------------
 def save_user_data(username, data):
-    """Dummy function for saving user data (can be replaced with DB/file)."""
-    # For now, do nothing to avoid errors
+    """Dummy save function (replace with real DB/file if needed)."""
     pass
 
 
-# ---------------- Login ----------------
+# ---------------- Login Page ----------------
 def login():
-    st.title("🔑 Login Page")
+    st.title("🔑 Login / Sign Up Page")
     username = st.text_input("Enter Username")
-    if st.button("Login"):
+    if st.button("Login / Sign Up"):
         if username.strip():
             st.session_state.username = username
-            st.session_state.user_data = {}
+            if "user_data" not in st.session_state:
+                st.session_state.user_data = {}
             st.success(f"Welcome {username}!")
             st.experimental_rerun()
 
@@ -28,7 +28,7 @@ def main_app():
     st.title("💉 MySugr Improved App")
     st.write(f"👋 Welcome, **{st.session_state.username}**")
 
-    # All app sections inside tabs
+    # Tabs
     tabs = st.tabs([
         "📊 Dashboard", "🥗 Diet Tracking", "💉 Advanced Insulin Assistant",
         "🍎 Diet Recommendations", "📂 Data Upload", "📈 Reports"
@@ -147,13 +147,11 @@ def main_app():
     with tabs[5]:
         st.header("📈 Reports")
 
-        # Glucose trends
         if st.session_state.user_data.get("insulin_recommendations"):
             df_insulin = pd.DataFrame(st.session_state.user_data["insulin_recommendations"])
             st.subheader("Glucose Level Trends")
             st.line_chart(df_insulin["glucose"])
 
-        # Calorie trends
         if st.session_state.user_data.get("diet_tracking"):
             df_calories = pd.DataFrame(st.session_state.user_data["diet_tracking"])
             st.subheader("Calorie Intake")
@@ -168,7 +166,7 @@ def main_app():
 # ---------------- Run App ----------------
 def run_app():
     if "username" not in st.session_state:
-        login()
+        login()  # ✅ first page (sign up/login) preserved
     else:
         main_app()
 
