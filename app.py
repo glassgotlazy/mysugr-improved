@@ -1,234 +1,315 @@
+main app.py
 import streamlit as st
 import pandas as pd
-import datetime
+import os
+import plotly.express as px
+import random
+from datetime import datetime
 
-# ---------------- Session & Auth ---------------- #
-if "users" not in st.session_state:
-    st.session_state["users"] = {}  # username -> password
+# ------------------------
+# Page Config
+# ------------------------
+st.set_page_config(
+    page_title="MySugr Improved",
+    page_icon="💉",
+    layout="wide"
+)
+
+# ------------------------
+# User Authentication Utils
+# ------------------------
+USER_FILE = "users.csv"
+
+def load_users():
+    if os.path.exists(USER_FILE):
+        return pd.read_csv(USER_FILE)
+    return pd.DataFrame(columns=["username", "password"])
+
+def save_user(username, password):
+    users = load_users()
+    if username in users["username"].values:
+        return False  # User already exists
+    users = pd.concat([users, pd.DataFrame([[username, password]], columns=["username", "password"])], ignore_index=True)
+    users.to_csv(USER_FILE, index=False)
+    return True
+
+def check_login(username, password):
+    users = load_users()
+    match = users[(users["username"] == username) & (users["password"] == password)]
+    return not match.empty
+
+# ------------------------
+# Session State Init
+# ------------------------
 if "logged_in" not in st.session_state:
-    st.session_state["logged_in"] = False
+    st.session_state.logged_in = False
 if "username" not in st.session_state:
-    st.session_state["username"] = None
+    st.session_state.username = None
 
+# ------------------------
+# Login / Signup Pages
+# ------------------------
+if not st.session_state.logged_in:
+    st.title("🔐 Welcome to MySugr Improved")
 
-def login(username, password):
-    if username in st.session_state["users"] and st.session_state["users"][username] == password:
-        st.session_state["logged_in"] = True
-        st.session_state["username"] = username
-        return True
-    return False
-
-
-def signup(username, password):
-    if username not in st.session_state["users"]:
-        st.session_state["users"][username] = password
-        return True
-    return False
-
-
-def get_user_key(suffix):
-    return f"{st.session_state['username']}_{suffix}"
-
-
-# ---------------- Login / Signup ---------------- #
-if not st.session_state["logged_in"]:
-    st.title("🔐 Login / Signup")
-
-    auth_choice = st.radio("Choose action:", ["Login", "Signup"])
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+    auth_choice = st.radio("Select Action", ["Login", "Sign Up"])
 
     if auth_choice == "Login":
+        st.subheader("Login to your account")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
         if st.button("Login"):
-            if login(username, password):
-                st.success("Logged in ✅")
+            if check_login(username, password):
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.success(f"✅ Welcome back, {username}!")
                 st.rerun()
             else:
-                st.error("Invalid credentials ❌")
-    else:
-        if st.button("Signup"):
-            if signup(username, password):
-                st.success("Account created 🎉 Please login.")
+                st.error("❌ Invalid username or password")
+
+    else:  # Signup
+        st.subheader("Create a new account")
+        new_username = st.text_input("Choose a username")
+        new_password = st.text_input("Choose a password", type="password")
+        if st.button("Sign Up"):
+            if save_user(new_username, new_password):
+                st.success("🎉 Account created! Please log in.")
             else:
-                st.error("Username already exists ❌")
+                st.error("⚠ Username already exists. Try a different one.")
+
     st.stop()
 
-# ---------------- Sidebar ---------------- #
-st.sidebar.title(f"👋 Welcome, {st.session_state['username']}")
+# ------------------------
+# If logged in → Continue App
+# ------------------------
+st.sidebar.success(f"👤 Logged in as {st.session_state.username}")
 if st.sidebar.button("Logout"):
-    st.session_state["logged_in"] = False
-    st.session_state["username"] = None
+    st.session_state.logged_in = False
+    st.session_state.username = None
     st.rerun()
 
-# ---------------- Tabs ---------------- #
-tab0, tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "💉 Insulin", "🥗 Diet", "📈 Weekly Summary"])
+# ------------------------
+# Tabs Layout (ONLY ONCE)
+# ------------------------
+tabs = st.tabs([
+    "📊 Dashboard",
+    "🥗 Diet Tracking",
+    "💉 Insulin Recommendations",
+    "🍎 Diet Recommendations"
+])
 
-# ===================================================== #
-# 📊 DASHBOARD
-# ===================================================== #
+# -------------------------
+# Dashboard Tab
+# -------------------------
+with tabs[0]:
     st.header("📊 Dashboard")
+    uploaded_file = st.file_uploader("📂 Upload your CSV file", type="csv")
 
-    # Upload glucose log
-    uploaded_glucose = st.file_uploader("📤 Upload Glucose Log (CSV)", type=["csv"], key="upload_glucose")
-    if uploaded_glucose is not None:
-        glucose_df = pd.read_csv(uploaded_glucose)
+    if uploaded_file:
+        try:
+            df = pd.read_csv(uploaded_file)
+            df.columns = df.columns.str.strip().str.lower()
 
-        # Ensure proper datetime handling
-        if "timestamp" in glucose_df.columns:
-            glucose_df["timestamp"] = pd.to_datetime(glucose_df["timestamp"])
-            glucose_df = glucose_df.sort_values("timestamp")
-
-            # Filter last 24 hours
-            last_24h = glucose_df[glucose_df["timestamp"] >= (pd.Timestamp.now() - pd.Timedelta(hours=24))]
-
-            if not last_24h.empty:
-                st.subheader("📈 Last 24 Hours Glucose Trend")
-
-                # Metrics
-                st.metric("Avg Glucose (mg/dL)", f"{last_24h['glucose'].mean():.1f}")
-                st.metric("Min Glucose (mg/dL)", f"{last_24h['glucose'].min():.1f}")
-                st.metric("Max Glucose (mg/dL)", f"{last_24h['glucose'].max():.1f}")
-                st.metric("Std Dev (mg/dL)", f"{last_24h['glucose'].std():.1f}")
-
-                # Line chart
-                st.line_chart(last_24h.set_index("timestamp")["glucose"])
+            if "date" in df.columns and "time" in df.columns:
+                df["datetime"] = pd.to_datetime(df["date"] + " " + df["time"], errors="coerce")
+            elif "datetime" in df.columns:
+                df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
             else:
-                st.warning("⚠️ No data in last 24 hours found in file.")
-        else:
-            st.error("Uploaded file must contain a 'timestamp' column and 'glucose' column.")
+                st.error("❌ No 'datetime' column found.")
+                st.stop()
 
+            st.success("✅ File uploaded successfully!")
+            st.dataframe(df.head())
 
+            if "blood sugar measurement (mg/dl)" in df.columns:
+                fig = px.line(df, x="datetime", y="blood sugar measurement (mg/dl)", title="Blood Sugar Over Time")
+                st.plotly_chart(fig, use_container_width=True)
 
-    insulin_key = get_user_key("insulin_history")
-    diet_key = get_user_key("diet_history")
+            insulin_cols = [col for col in df.columns if "insulin" in col]
+            if insulin_cols:
+                for col in insulin_cols:
+                    fig = px.line(df, x="datetime", y=col, title=f"{col.title()} Over Time")
+                    st.plotly_chart(fig, use_container_width=True)
 
-    if insulin_key not in st.session_state:
-        st.session_state[insulin_key] = pd.DataFrame(columns=["carbs", "bg", "dose", "timestamp"])
-    if diet_key not in st.session_state:
-        st.session_state[diet_key] = pd.DataFrame(columns=["meal", "rating", "notes", "timestamp"])
+        except Exception as e:
+            st.error(f"❌ Error processing file: {e}")
+    else:
+        st.info("Upload a CSV file to see your dashboard.")
 
-    insulin_df = st.session_state[insulin_key]
-    diet_df = st.session_state[diet_key]
+# -------------------------
+# Diet Tracking Tab
+# -------------------------
+with tabs[1]:
+    st.header("🥗 Diet Tracking")
+    st.write("Keep track of whether you followed your diet plan today.")
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        diet_followed = st.checkbox("✅ Did you follow your diet today?")
+    with col2:
+        if not diet_followed:
+            st.text_input("❌ If not, what did you eat instead?")
+
+# -------------------------
+# Insulin Recommendation Tab
+# -------------------------
+with tabs[2]:
+    st.header("💉 Insulin Assistant")
+    st.markdown("This tool helps you calculate your *meal-time insulin dose* based on your carbs and blood sugar levels.")
 
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("💉 Total Insulin Records", len(insulin_df))
+        carbs = st.number_input("🍞 Carbs in your meal (grams)", min_value=0, max_value=200, value=50)
+        carb_ratio = st.number_input("⚖ Insulin-to-Carb Ratio (g/unit)", min_value=1, max_value=30, value=10)
     with col2:
-        st.metric("🥗 Meals Logged", len(diet_df))
+        glucose = st.number_input("🩸 Current Blood Sugar (mg/dL)", min_value=50, max_value=400, value=150)
+        correction_factor = st.number_input("🔧 Correction Factor (mg/dL per unit)", min_value=10, max_value=100, value=50)
 
-    if not insulin_df.empty:
-        st.subheader("📉 Blood Glucose & Dose History")
-        st.line_chart(insulin_df.set_index("timestamp")[["bg", "dose"]])
+    target_glucose = st.number_input("🎯 Target Blood Sugar (mg/dL)", min_value=80, max_value=150, value=110)
 
-    if not diet_df.empty:
-        st.subheader("⭐ Meal Ratings Trend")
-        st.line_chart(diet_df.set_index("timestamp")[["rating"]])
+    carb_insulin = carbs / carb_ratio if carb_ratio else 0
+    correction_insulin = max((glucose - target_glucose) / correction_factor, 0) if correction_factor else 0
+    total_dose = round(carb_insulin + correction_insulin, 1)
 
-# ===================================================== #
-# 💉 INSULIN TAB
-# ===================================================== #
-with tab1:
-    st.header("💉 Insulin Dose Calculator")
+    st.subheader("📊 Insulin Dose Recommendation")
+    st.metric("Carb Coverage", f"{carb_insulin:.1f} units")
+    st.metric("Correction Dose", f"{correction_insulin:.1f} units")
+    st.metric("✅ Total Recommended Dose", f"{total_dose:.1f} units")
 
-    carbs = st.number_input("Carbohydrates (grams)", min_value=0, step=1)
-    current_bg = st.number_input("Current Blood Glucose (mg/dL)", min_value=0, step=1)
-    target_bg = st.number_input("Target Blood Glucose (mg/dL)", min_value=80, value=110, step=1)
-    carb_ratio = st.number_input("Insulin-to-Carb Ratio (g/unit)", min_value=1, value=15, step=1)
-    correction_factor = st.number_input("Correction Factor (mg/dL/unit)", min_value=10, value=50, step=1)
+    st.markdown("### 📉 Dose Breakdown")
+    st.progress(min(int((total_dose/20)*100), 100))
+    st.bar_chart(pd.DataFrame({"Insulin Units": [carb_insulin, correction_insulin]}, index=["Carb Coverage", "Correction"]))
 
-    if st.button("Calculate Insulin Dose"):
-        carb_insulin = carbs / carb_ratio if carb_ratio > 0 else 0
-        correction_insulin = (current_bg - target_bg) / correction_factor if current_bg > target_bg else 0
-        total_dose = carb_insulin + correction_insulin
+    st.markdown("💡 *Note:* This is a helper tool, not medical advice. Always confirm with your doctor before making insulin adjustments.")
 
-        st.subheader("📊 Dose Recommendation")
-        st.metric("Carb Coverage", f"{carb_insulin:.1f} units")
-        st.metric("Correction Dose", f"{correction_insulin:.1f} units")
-        st.metric("✅ Total Recommended Dose", f"{total_dose:.1f} units")
+import streamlit as st
+import random
+import pandas as pd
+from datetime import datetime
 
-        insulin_key = get_user_key("insulin_history")
-        new_entry = {
-            "carbs": carbs,
-            "bg": current_bg,
-            "dose": total_dose,
-            "timestamp": datetime.datetime.now(),
-        }
-        st.session_state[insulin_key] = pd.concat(
-            [st.session_state[insulin_key], pd.DataFrame([new_entry])],
-            ignore_index=True
-        )
-
-# ===================================================== #
-# 🥗 DIET TAB
-# ===================================================== #
-with tab2:
-    st.header("🥗 Diet Planner")
-
-    diet_plans = {
-        "Breakfast": [
-            ("Oatmeal with fruits", "https://i.imgur.com/1O4iN5c.jpg"),
-            ("Vegetable omelette", "https://i.imgur.com/Ht6p8Qq.jpg"),
-            ("Greek yogurt with honey", "https://i.imgur.com/TSJ0A9Z.jpg"),
+# ----------------------
+# Meals categorized with nutrition + images
+# ----------------------
+meals = {
+   "Breakfast": [
+            {"name": "Oatmeal with Fruits",
+             "img": "https://www.pcrm.org/sites/default/files/Oatmeal%20and%20Berries.jpg",
+             "nutrition": {"Calories": 250, "Protein": 8, "Carbs": 45, "Fat": 5}},
+            {"name": "Avocado Toast",
+             "img": "https://www.spendwithpennies.com/wp-content/uploads/2022/09/Avocado-Toast-SpendWithPennies-1.jpg",
+             "nutrition": {"Calories": 300, "Protein": 10, "Carbs": 30, "Fat": 12}},
+            {"name": "Smoothie Bowl",
+             "img": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR9Fr7Ab7WaznNaTenCirjohOtnd0P7JOcO1Q&s",
+             "nutrition": {"Calories": 280, "Protein": 9, "Carbs": 40, "Fat": 7}},
+            {"name": "Idli with Sambar",
+             "img": "https://maayeka.com/wp-content/uploads/2013/10/soft-idli-recipe.jpg",
+             "nutrition": {"Calories": 320, "Protein": 11, "Carbs": 55, "Fat": 6}},
+            {"name": "Vegetable Upma",
+             "img": "https://beextravegant.com/wp-content/uploads/2022/05/Untitled.png",
+             "nutrition": {"Calories": 280, "Protein": 8, "Carbs": 48, "Fat": 7}},
         ],
         "Lunch": [
-            ("Grilled chicken with salad", "https://i.imgur.com/jh5N8x7.jpg"),
-            ("Brown rice with dal & veggies", "https://i.imgur.com/UKxjxnT.jpg"),
-            ("Paneer wrap", "https://i.imgur.com/9LZxO7Q.jpg"),
+            {"name": "Grilled Chicken Salad",
+             "img": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ6a3xakcHAEaQRTfoC2aOAJL7j3rZXR397NA&s",
+             "nutrition": {"Calories": 400, "Protein": 35, "Carbs": 20, "Fat": 15}},
+            {"name": "Quinoa Bowl",
+             "img": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTVge3iLT0xXk-PF3uA7XBtbsD6j3P8pISHYA&s",
+             "nutrition": {"Calories": 420, "Protein": 18, "Carbs": 55, "Fat": 12}},
+            {"name": "Paneer Butter Masala with Roti",
+             "img": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-Ac_83R91yFAml5yt8twiimb_LSUNkbaEfw&s",
+             "nutrition": {"Calories": 520, "Protein": 20, "Carbs": 45, "Fat": 28}},
+            {"name": "Dal Tadka with Rice",
+             "img": "https://i0.wp.com/upbeetanisha.com/wp-content/uploads/2024/01/IMG_9643.jpg?resize=768%2C1024&ssl=1",
+             "nutrition": {"Calories": 450, "Protein": 16, "Carbs": 60, "Fat": 14}},
         ],
         "Dinner": [
-            ("Baked salmon with veggies", "https://i.imgur.com/G2X8Z6H.jpg"),
-            ("Whole wheat roti with sabzi", "https://i.imgur.com/kN4F0uQ.jpg"),
-            ("Soup with whole grain bread", "https://i.imgur.com/ct7V9kW.jpg"),
+            {"name": "Baked Salmon with Veggies",
+             "img": "https://hungryfoodie.com/wp-content/uploads/2023/09/Sheet-Pan-Salmon-and-Vegetables-21.jpg",
+             "nutrition": {"Calories": 500, "Protein": 40, "Carbs": 25, "Fat": 22}},
+            {"name": "Veggie Stir Fry",
+             "img": "https://hips.hearstapps.com/hmg-prod/images/veggie-stir-fry-1597687367.jpg?crop=0.793xw:0.793xh;0.0619xw,0.0928xh&resize=1200:*",
+             "nutrition": {"Calories": 350, "Protein": 12, "Carbs": 50, "Fat": 10}},
+            {"name": "Rajma Chawal",
+             "img": "https://images.squarespace-cdn.com/content/v1/5ea3b22556f3d073f3d9cae4/e37ea0ac-2f37-4df2-8e1e-3678f2f80fee/IMG_0856.jpg",
+             "nutrition": {"Calories": 480, "Protein": 18, "Carbs": 70, "Fat": 12}},
+            {"name": "Grilled Paneer with Veggies",
+             "img": "https://madscookhouse.com/wp-content/uploads/2021/07/Peri-Peri-Paneer-Steaks.jpg",
+             "nutrition": {"Calories": 430, "Protein": 25, "Carbs": 22, "Fat": 24}},
         ],
+        "Snack": [
+            {"name": "Greek Yogurt with Honey",
+             "img": "https://realgreekrecipes.com/wp-content/uploads/2018/02/Greek-Yogurt-With-Honey-And-Walnuts-Recipe.jpg",
+             "nutrition": {"Calories": 180, "Protein": 12, "Carbs": 20, "Fat": 4}},
+            {"name": "Mixed Nuts",
+             "img": "https://m.media-amazon.com/images/I/71oR9w5AjbL.UF1000,1000_QL80.jpg",
+             "nutrition": {"Calories": 200, "Protein": 6, "Carbs": 8, "Fat": 18}},
+            {"name": "Fruit Salad",
+             "img": "https://www.modernhoney.com/wp-content/uploads/2023/05/Fruit-Salad-10.jpg",
+             "nutrition": {"Calories": 150, "Protein": 2, "Carbs": 35, "Fat": 1}},
+            {"name": "Roasted Chickpeas",
+             "img": "https://www.allrecipes.com/thmb/WdQzwYsrWX0-6zRprlfn7OitWN8=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/81548-roasted-chickpeas-ddmfs-0442-1x2-hero-295c03efec90435a8588848f7e50f0bf.jpg",
+             "nutrition": {"Calories": 170, "Protein": 9, "Carbs": 30, "Fat": 4}},
+        ]
     }
 
-    history_key = get_user_key("diet_history")
-    if history_key not in st.session_state:
-        st.session_state[history_key] = pd.DataFrame(columns=["meal", "rating", "notes", "timestamp"])
+days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+categories = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
-    for category, meals in diet_plans.items():
-        st.subheader(category)
-        cols = st.columns(len(meals))
-        for idx, (meal, img) in enumerate(meals):
-            with cols[idx]:
-                st.image(img, caption=meal, use_container_width=True)
-                rating = st.slider(f"Rate {meal}", 1, 5, 3, key=f"{category}_{meal}_rating")
-                notes = st.text_input(f"Notes for {meal}", key=f"{category}_{meal}_notes")
-                if st.button(f"Save {meal}", key=f"{category}_{meal}_save"):
-                    new_entry = {
-                        "meal": meal,
-                        "rating": rating,
-                        "notes": notes,
-                        "timestamp": datetime.datetime.now()
-                    }
-                    st.session_state[history_key] = pd.concat(
-                        [st.session_state[history_key], pd.DataFrame([new_entry])],
-                        ignore_index=True
-                    )
-                    st.success(f"Saved {meal} ✅")
+# ----------------------
+# USER-STATE HELPERS
+# ----------------------
+def get_user_key(key: str):
+    """Prefix session state keys with username to isolate per user."""
+    return f"{st.session_state.username}_{key}" if "username" in st.session_state else key
 
-    st.subheader("📜 Diet History")
-    df = st.session_state[history_key]
-    st.dataframe(df)
+def init_user_state():
+    """Initialize user-specific state safely."""
+    if "username" not in st.session_state or not st.session_state.username:
+        return
+    user_key = get_user_key("weekly_meals")
+    if user_key not in st.session_state:
+        st.session_state[user_key] = {
+            d: random.choice(meals[categories[i % len(categories)]])
+            for i, d in enumerate(days)
+        }
 
-    if not df.empty:
-        csv_file = f"diet_history_{st.session_state['username']}.csv"
-        df.to_csv(csv_file, index=False)
-        with open(csv_file, "rb") as f:
-            st.download_button("📥 Download Diet History (CSV)", f, file_name=csv_file)
+# ----------------------
+# Main Diet Tab
+# ----------------------
+st.title("🍽 Auto-Balanced Weekly Diet Plan")
 
-# ===================================================== #
-# 📈 WEEKLY SUMMARY TAB
-# ===================================================== #
-with tab3:
-    st.header("📈 Weekly Summary")
+# Initialize per-user data
+init_user_state()
+user_weekly_meals = st.session_state[get_user_key("weekly_meals")]
 
-    history_key = get_user_key("diet_history")
-    if history_key in st.session_state and not st.session_state[history_key].empty:
-        df = st.session_state[history_key]
-        df["day"] = pd.to_datetime(df["timestamp"]).dt.day_name()
+# Track weekly totals
+weekly_totals = {"Calories": 0, "Protein": 0, "Carbs": 0, "Fat": 0}
 
-        weekly_totals = df.groupby("day")["rating"].mean()
-        st.bar_chart(weekly_totals)
-    else:
-        st.info("No history found for this week.")
+for day in days:
+    meal = user_weekly_meals[day]
+    st.subheader(f"{day} → {meal['name']}")
+    st.image(meal["img"], caption=meal["name"], width=300)
+
+    # Nutrition breakdown
+    st.markdown("📊 Nutrition Breakdown:")
+    cols = st.columns(4)
+    for i, (k, v) in enumerate(meal["nutrition"].items()):
+        cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
+        weekly_totals[k] += v
+
+    # Replace option
+    if st.button(f"🔄 Change {day}", key=f"change_{day}_{st.session_state.username}"):
+        for cat, meal_list in meals.items():
+            if meal in meal_list:
+                user_weekly_meals[day] = random.choice(meal_list)
+        st.rerun()
+
+    # Rating + Notes
+    st.slider(f"⭐ Rate {meal['name']}", 1, 5, 3, key=f"rating_{day}_{st.session_state.username}")
+    st.text_area(f"📝 Notes for {meal['name']}", key=f"note_{day}_{st.session_state.username}")
+    st.write("---")
+
+# 📊 Weekly Summary
+st.subheader("📅 Weekly Nutrition Summary")
+summary_cols = st.columns(4)
+for i, (k, v) in enumerate(weekly_totals.items()):
+    summary_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
