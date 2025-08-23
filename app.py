@@ -3,22 +3,51 @@ import pandas as pd
 import random
 from datetime import datetime
 
+
+# ---------------- Login ----------------
+def login():
+    st.title("🔑 Login Page")
+    username = st.text_input("Enter Username")
+    if st.button("Login"):
+        if username.strip():
+            st.session_state.username = username
+            st.session_state.user_data = {}
+            st.success(f"Welcome {username}!")
+            st.experimental_rerun()
+
+
+# ---------------- Main App ----------------
 def main_app():
     st.markdown("*Made by ~Glass*", unsafe_allow_html=True)
     st.title("💉 MySugr Improved App")
-
-    # User greeting
     st.write(f"👋 Welcome, **{st.session_state.username}**")
 
-    # Create Tabs
-    tabs = st.tabs([
-        "📊 Dashboard",
-        "🥗 Diet Tracking",
-        "💉 Advanced Insulin Assistant",
-        "🍎 Diet Recommendations",
-        "📂 Data Upload",
-        "📈 Reports"
-    ])
+    tabs = st.tabs(["📊 Dashboard", "🥗 Diet Tracking"])
+
+    with tabs[0]:
+        st.header("📊 Dashboard")
+        st.write("✅ Dashboard Loaded")
+
+    with tabs[1]:
+        st.header("🥗 Diet Tracking")
+        st.write("✅ Diet Tracking Loaded")
+
+    if st.button("🚪 Logout"):
+        st.session_state.clear()
+        st.experimental_rerun()
+
+
+# ---------------- Run App ----------------
+def run_app():
+    if "username" not in st.session_state:
+        login()
+    else:
+        main_app()
+
+
+if __name__ == "__main__":
+    run_app()
+
 
     # ---------------- Dashboard ----------------
     with tabs[0]:
