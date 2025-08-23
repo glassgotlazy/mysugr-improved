@@ -91,10 +91,13 @@ def main_app():
 
     with tabs[0]:
         st.header("📊 Dashboard")
-        st.write("Welcome to your personalized dashboard, ", st.session_state.username)
-        if st.session_state.user_data["diet_tracking"]:
+        st.write("Welcome to your personalized dashboard,", st.session_state.username)
+
+        if st.session_state.get("user_data", {}).get("diet_tracking"):
             df = pd.DataFrame(st.session_state.user_data["diet_tracking"])
             st.dataframe(df)
+        else:
+            st.info("No meals tracked yet.")
 
     with tabs[1]:
         st.header("🥗 Diet Tracking")
@@ -102,7 +105,7 @@ def main_app():
         calories = st.number_input("Calories", 0)
         if st.button("Add Meal"):
             new_meal = {"meal": meal, "calories": calories, "time": str(datetime.now())}
-            st.session_state.user_data["diet_tracking"].append(new_meal)
+            st.session_state.user_data.setdefault("diet_tracking", []).append(new_meal)
             save_user_data(st.session_state.username, st.session_state.user_data)
             st.success("Meal added!")
 
@@ -111,18 +114,34 @@ def main_app():
         glucose_level = st.number_input("Current Glucose Level (mg/dL)", 0)
         if st.button("Get Recommendation"):
             recommendation = f"Take {glucose_level/50:.1f} units of insulin."
-            st.session_state.user_data["insulin_recommendations"].append({"glucose": glucose_level, "recommendation": recommendation, "time": str(datetime.now())})
+            st.session_state.user_data.setdefault("insulin_recommendations", []).append({
+                "glucose": glucose_level,
+                "recommendation": recommendation,
+                "time": str(datetime.now())
+            })
             save_user_data(st.session_state.username, st.session_state.user_data)
             st.info(recommendation)
+
+        if st.session_state.get("user_data", {}).get("insulin_recommendations"):
+            df = pd.DataFrame(st.session_state.user_data["insulin_recommendations"])
+            st.dataframe(df)
 
     with tabs[3]:
         st.header("🍎 Diet Recommendations")
         diet_choice = st.selectbox("Choose your diet goal", ["Weight Loss", "Weight Gain", "Maintain Weight"])
         if st.button("Get Diet Plan"):
             plan = f"Recommended diet plan for {diet_choice}"
-            st.session_state.user_data["diet_recommendations"].append({"goal": diet_choice, "plan": plan, "time": str(datetime.now())})
+            st.session_state.user_data.setdefault("diet_recommendations", []).append({
+                "goal": diet_choice,
+                "plan": plan,
+                "time": str(datetime.now())
+            })
             save_user_data(st.session_state.username, st.session_state.user_data)
             st.success(plan)
+
+        if st.session_state.get("user_data", {}).get("diet_recommendations"):
+            df = pd.DataFrame(st.session_state.user_data["diet_recommendations"])
+            st.dataframe(df)
 
 # ---------------------- Run App ----------------------
 def run_app():
