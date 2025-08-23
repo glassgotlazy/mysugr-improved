@@ -5,7 +5,7 @@ from datetime import datetime
 
 # ---------------- Utility ----------------
 def save_user_data(username, data):
-    """Dummy save function (replace with real DB/file if needed)."""
+    """Dummy save function (replace with DB or file persistence if needed)."""
     pass
 
 
@@ -19,7 +19,7 @@ def login():
             if "user_data" not in st.session_state:
                 st.session_state.user_data = {}
             st.success(f"Welcome {username}!")
-            st.rerun()   # ✅ modern replacement for st.experimental_rerun()
+            st.rerun()   # modern rerun
 
 
 # ---------------- Main App ----------------
@@ -28,9 +28,14 @@ def main_app():
     st.title("💉 MySugr Improved App")
     st.write(f"👋 Welcome, **{st.session_state.username}**")
 
+    # Tabs
     tabs = st.tabs([
-        "📊 Dashboard", "🥗 Diet Tracking", "💉 Advanced Insulin Assistant",
-        "🍎 Diet Recommendations", "📂 Data Upload", "📈 Reports"
+        "📊 Dashboard", 
+        "🥗 Diet Tracking", 
+        "💉 Advanced Insulin Assistant",
+        "🍎 Diet Recommendations", 
+        "📂 Data Upload", 
+        "📈 Reports"
     ])
 
     # ---------------- Dashboard ----------------
@@ -58,31 +63,31 @@ def main_app():
             df_meals = pd.DataFrame(st.session_state.user_data["diet_tracking"])
             st.dataframe(df_meals)
 
-# ---------------- Advanced Insulin Assistant ----------------
-with tabs[2]:
-    st.header("💉 Advanced Insulin Assistant")
+    # ---------------- Advanced Insulin Assistant ----------------
+    with tabs[2]:
+        st.header("💉 Advanced Insulin Assistant")
 
-    glucose = st.number_input("Current Glucose Level (mg/dL)", min_value=40, max_value=400, key="glucose_input")
-    carbs = st.number_input("Carbohydrate Intake (grams)", min_value=0, key="carbs_input")
-    sensitivity = st.slider("Insulin Sensitivity Factor", 10, 100, 50, key="sensitivity_input")
+        glucose = st.number_input("Current Glucose Level (mg/dL)", min_value=40, max_value=400, key="glucose_input")
+        carbs = st.number_input("Carbohydrate Intake (grams)", min_value=0, key="carbs_input")
+        sensitivity = st.slider("Insulin Sensitivity Factor", 10, 100, 50, key="sensitivity_input")
 
-    if st.button("Calculate Insulin Dose", key="insulin_button"):
-        recommended_dose = (glucose - 100) / sensitivity + (carbs / 10)
-        recommended_dose = max(0, round(recommended_dose, 2))
+        if st.button("Calculate Insulin Dose", key="insulin_button"):
+            recommended_dose = (glucose - 100) / sensitivity + (carbs / 10)
+            recommended_dose = max(0, round(recommended_dose, 2))
 
-        st.session_state.last_insulin_dose = recommended_dose  # ✅ persist result
+            st.session_state.last_insulin_dose = recommended_dose  # ✅ persist result
 
-        st.session_state.user_data.setdefault("insulin_recommendations", []).append({
-            "glucose": glucose,
-            "carbs": carbs,
-            "dose": recommended_dose,
-            "time": str(datetime.now())
-        })
-        save_user_data(st.session_state.username, st.session_state.user_data)
+            st.session_state.user_data.setdefault("insulin_recommendations", []).append({
+                "glucose": glucose,
+                "carbs": carbs,
+                "dose": recommended_dose,
+                "time": str(datetime.now())
+            })
+            save_user_data(st.session_state.username, st.session_state.user_data)
 
-    # Always show last result if available
-    if "last_insulin_dose" in st.session_state:
-        st.success(f"💉 Recommended Insulin Dose: **{st.session_state.last_insulin_dose} units**")
+        # Always show last result if available
+        if "last_insulin_dose" in st.session_state:
+            st.success(f"💉 Recommended Insulin Dose: **{st.session_state.last_insulin_dose} units**")
 
     # ---------------- Diet Recommendations ----------------
     with tabs[3]:
@@ -164,7 +169,7 @@ with tabs[2]:
     # ---------------- Logout ----------------
     if st.button("🚪 Logout"):
         st.session_state.clear()
-        st.rerun()   # ✅ use st.rerun()
+        st.rerun()
 
 
 # ---------------- Run App ----------------
