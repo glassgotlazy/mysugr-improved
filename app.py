@@ -1,10 +1,22 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
+import random
+from datetime import datetime
 import os
 
-# ------------------------
+# ---------------------------------
+# Page Config (must be first Streamlit call)
+# ---------------------------------
+st.set_page_config(
+    page_title="MySugar Advanced",
+    page_icon="💉",
+    layout="wide",
+)
+
+# ---------------------------------
 # User Authentication Utils
-# ------------------------
+# ---------------------------------
 USER_FILE = "users.csv"
 
 def load_users():
@@ -16,7 +28,10 @@ def save_user(username, password):
     users = load_users()
     if username in users["username"].values:
         return False  # User already exists
-    users = pd.concat([users, pd.DataFrame([[username, password]], columns=["username", "password"])], ignore_index=True)
+    users = pd.concat(
+        [users, pd.DataFrame([[username, password]], columns=["username", "password"])],
+        ignore_index=True,
+    )
     users.to_csv(USER_FILE, index=False)
     return True
 
@@ -25,23 +40,21 @@ def check_login(username, password):
     match = users[(users["username"] == username) & (users["password"] == password)]
     return not match.empty
 
-
-# ------------------------
+# ---------------------------------
 # Session State
-# ------------------------
+# ---------------------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
     st.session_state.username = None
 
-
-# ------------------------
+# ---------------------------------
 # Login / Signup Pages
-# ------------------------
+# ---------------------------------
 if not st.session_state.logged_in:
     st.title("🔐 Welcome to MySugr Improved")
 
-    auth_choice = st.radio("Select Action", ["Login", "Sign Up"])
+    auth_choice = st.radio("Select Action", ["Login", "Sign Up"], horizontal=True)
 
     if auth_choice == "Login":
         st.subheader("Login to your account")
@@ -55,7 +68,6 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 st.error("❌ Invalid username or password")
-
     else:  # Signup
         st.subheader("Create a new account")
         new_username = st.text_input("Choose a username")
@@ -68,61 +80,30 @@ if not st.session_state.logged_in:
 
     st.stop()  # Prevents the rest of the app from running until logged in
 
-# ------------------------
+# ---------------------------------
 # If logged in → Continue App
-# ------------------------
+# ---------------------------------
 st.sidebar.success(f"👤 Logged in as {st.session_state.username}")
 if st.sidebar.button("Logout"):
     st.session_state.logged_in = False
     st.session_state.username = None
     st.rerun()
 
-
-# ------------------------
-# App Layout
-# ------------------------
-st.set_page_config(page_title="MySugr Improved", layout="wide")
-
-# Create Tabs (adjust labels to match your existing main code)
-tabs = st.tabs([
-    "🏠 Dashboard",
-    "💉 Insulin",
-    "🍽 Diet Plan",
-    "📊 Reports",
-    "⚙ Settings"
-])
-
-# =======================
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import random
-from datetime import datetime
-
-# -------------------------
-# Page Config
-# -------------------------
-st.set_page_config(
-    page_title="MySugar Advanced",
-    page_icon="💉",
-    layout="wide"
-)
-
 st.title("🩸 MySugar - Diabetes Tracking Dashboard")
 
-# -------------------------
-# Tabs
-# -------------------------
+# ---------------------------------
+# Tabs (single, unified)
+# ---------------------------------
 tabs = st.tabs([
     "📊 Dashboard",
     "🥗 Diet Tracking",
     "💉 Insulin Recommendations",
-    "🍎 Diet Recommendations"
+    "🍎 Diet Recommendations",
 ])
 
-# -------------------------
-# Dashboard Tab
-# -------------------------
+# ---------------------------------
+# 📊 Dashboard Tab
+# ---------------------------------
 with tabs[0]:
     st.header("📊 Dashboard")
 
@@ -137,7 +118,9 @@ with tabs[0]:
 
             # Merge date & time into datetime if available
             if "date" in df.columns and "time" in df.columns:
-                df["datetime"] = pd.to_datetime(df["date"] + " " + df["time"], errors="coerce")
+                df["datetime"] = pd.to_datetime(
+                    df["date"].astype(str) + " " + df["time"].astype(str), errors="coerce"
+                )
             elif "datetime" in df.columns:
                 df["datetime"] = pd.to_datetime(df["datetime"], errors="coerce")
             else:
@@ -150,14 +133,24 @@ with tabs[0]:
 
             # Line chart for Blood Sugar
             if "blood sugar measurement (mg/dl)" in df.columns:
-                fig = px.line(df, x="datetime", y="blood sugar measurement (mg/dl)", title="Blood Sugar Over Time")
+                fig = px.line(
+                    df.sort_values("datetime"),
+                    x="datetime",
+                    y="blood sugar measurement (mg/dl)",
+                    title="Blood Sugar Over Time",
+                )
                 st.plotly_chart(fig, use_container_width=True)
 
-            # Line chart for Insulin
+            # Line chart for any insulin-related columns
             insulin_cols = [col for col in df.columns if "insulin" in col]
             if insulin_cols:
                 for col in insulin_cols:
-                    fig = px.line(df, x="datetime", y=col, title=f"{col.title()} Over Time")
+                    fig = px.line(
+                        df.sort_values("datetime"),
+                        x="datetime",
+                        y=col,
+                        title=f"{col.title()} Over Time",
+                    )
                     st.plotly_chart(fig, use_container_width=True)
 
         except Exception as e:
@@ -165,9 +158,9 @@ with tabs[0]:
     else:
         st.info("Upload a CSV file to see your dashboard.")
 
-# -------------------------
-# Diet Tracking Tab
-# -------------------------
+# ---------------------------------
+# 🥗 Diet Tracking Tab
+# ---------------------------------
 with tabs[1]:
     st.header("🥗 Diet Tracking")
 
@@ -182,13 +175,15 @@ with tabs[1]:
         if not diet_followed:
             st.text_input("❌ If not, what did you eat instead?")
 
-# -------------------------
+# ---------------------------------
 # 💉 Insulin Recommendation Tab
-# -------------------------
+# ---------------------------------
 with tabs[2]:
     st.header("💉 Insulin Assistant")
 
-    st.markdown("This tool helps you calculate your *meal-time insulin dose* based on your carbs and blood sugar levels.")
+    st.markdown(
+        "This tool helps you calculate your *meal-time insulin dose* based on your carbs and blood sugar levels."
+    )
 
     # Inputs
     col1, col2 = st.columns(2)
@@ -197,7 +192,9 @@ with tabs[2]:
         carb_ratio = st.number_input("⚖ Insulin-to-Carb Ratio (g/unit)", min_value=1, max_value=30, value=10)
     with col2:
         glucose = st.number_input("🩸 Current Blood Sugar (mg/dL)", min_value=50, max_value=400, value=150)
-        correction_factor = st.number_input("🔧 Correction Factor (mg/dL per unit)", min_value=10, max_value=100, value=50)
+        correction_factor = st.number_input(
+            "🔧 Correction Factor (mg/dL per unit)", min_value=10, max_value=100, value=50
+        )
 
     target_glucose = st.number_input("🎯 Target Blood Sugar (mg/dL)", min_value=80, max_value=150, value=110)
 
@@ -214,33 +211,30 @@ with tabs[2]:
 
     # Visualization
     st.markdown("### 📉 Dose Breakdown")
-    st.progress(min(int((total_dose/20)*100), 100))  # progress bar out of 20 units
+    st.progress(min(int((total_dose / 20) * 100), 100))  # progress bar out of 20 units
     st.bar_chart(
         pd.DataFrame(
             {"Insulin Units": [carb_insulin, correction_insulin]},
-            index=["Carb Coverage", "Correction"]
+            index=["Carb Coverage", "Correction"],
         )
     )
 
     # Notes
     st.markdown("💡 *Note:* This is a helper tool, not medical advice. Always confirm with your doctor before making insulin adjustments.")
 
-# ----------------------
-# Diet Tab
-# ----------------------
-# ----------------------
-# Diet Recommendation Tab
-# ----------------------
+# ---------------------------------
+# 🍎 Diet Recommendations Tab
+# ---------------------------------
 with tabs[3]:
     st.header("🍎 Diet Recommendations")
 
-    # Days of the week
+    # Days of the week & categories
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     categories = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
     # Meals categorized with nutrition + real images
     meals = {
-"Breakfast": [
+        "Breakfast": [
             {"name": "Oatmeal with Fruits",
              "img": "https://www.pcrm.org/sites/default/files/Oatmeal%20and%20Berries.jpg",
              "nutrition": {"Calories": 250, "Protein": 8, "Carbs": 45, "Fat": 5}},
@@ -298,10 +292,8 @@ with tabs[3]:
             {"name": "Roasted Chickpeas",
              "img": "https://www.allrecipes.com/thmb/WdQzwYsrWX0-6zRprlfn7OitWN8=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/81548-roasted-chickpeas-ddmfs-0442-1x2-hero-295c03efec90435a8588848f7e50f0bf.jpg",
              "nutrition": {"Calories": 170, "Protein": 9, "Carbs": 30, "Fat": 4}},
-        ]
+        ],
     }
-    days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
-    categories = ["Breakfast", "Lunch", "Dinner", "Snack"]
 
     # --- SAFE INIT / HEAL weekly_meals ---
     def _pick(day_index: int):
@@ -349,8 +341,8 @@ with tabs[3]:
 
         st.markdown("---")
 
-    # 📊 Weekly Summary
+    # 📅 Weekly Summary
     st.subheader("📅 Weekly Nutrition Summary")
     summary_cols = st.columns(4)
     for i, (k, v) in enumerate(weekly_totals.items()):
-        summary_cols[i].metric(k, f"{v}{'g' if k!='Calories' else ''}")
+        summary_cols[i].metric(k, f"{v}{'g' if k != 'Calories' else ''}")
