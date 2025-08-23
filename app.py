@@ -4,22 +4,34 @@ import random
 from datetime import datetime
 
 # ---------------- Utility ----------------
-def save_user_data(username, data):
-    """Dummy save function (replace with DB or file persistence if needed)."""
-    pass
+def init_user_storage():
+    """Ensure global storage exists for all users."""
+    if "all_users" not in st.session_state:
+        st.session_state.all_users = {}
+
+def load_user_data(username):
+    """Load data for a given user into session state."""
+    init_user_storage()
+    if username not in st.session_state.all_users:
+        st.session_state.all_users[username] = {}
+    st.session_state.user_data = st.session_state.all_users[username]
+
+def save_user_data(username):
+    """Save current user data back to global store."""
+    st.session_state.all_users[username] = st.session_state.user_data
 
 
 # ---------------- Login Page ----------------
 def login():
     st.title("🔑 Login / Sign Up Page")
     username = st.text_input("Enter Username")
+
     if st.button("Login / Sign Up"):
         if username.strip():
-            st.session_state.username = username
-            if "user_data" not in st.session_state:
-                st.session_state.user_data = {}
+            st.session_state.username = username.strip()
+            load_user_data(st.session_state.username)
             st.success(f"Welcome {username}!")
-            st.rerun()   # modern rerun
+            st.rerun()   # rerun after login
 
 
 # ---------------- Main App ----------------
@@ -49,13 +61,14 @@ def main_app():
         st.header("🥗 Diet Tracking")
         meal = st.text_input("Meal Name")
         calories = st.number_input("Calories", min_value=0)
+
         if st.button("Add Meal"):
             st.session_state.user_data.setdefault("diet_tracking", []).append({
                 "meal": meal,
                 "calories": calories,
                 "time": str(datetime.now())
             })
-            save_user_data(st.session_state.username, st.session_state.user_data)
+            save_user_data(st.session_state.username)
             st.success("Meal added!")
 
         if st.session_state.user_data.get("diet_tracking"):
@@ -83,7 +96,7 @@ def main_app():
                 "dose": recommended_dose,
                 "time": str(datetime.now())
             })
-            save_user_data(st.session_state.username, st.session_state.user_data)
+            save_user_data(st.session_state.username)
 
         # Always show last result if available
         if "last_insulin_dose" in st.session_state:
@@ -112,7 +125,7 @@ def main_app():
                 "plan": plan,
                 "time": str(datetime.now())
             })
-            save_user_data(st.session_state.username, st.session_state.user_data)
+            save_user_data(st.session_state.username)
 
             st.success("✅ Diet plan generated!")
             st.dataframe(df)
@@ -150,7 +163,7 @@ def main_app():
                 "data": df_upload.to_dict(),
                 "time": str(datetime.now())
             })
-            save_user_data(st.session_state.username, st.session_state.user_data)
+            save_user_data(st.session_state.username)
 
     # ---------------- Reports ----------------
     with tabs[5]:
@@ -168,7 +181,8 @@ def main_app():
 
     # ---------------- Logout ----------------
     if st.button("🚪 Logout"):
-        st.session_state.clear()
+        st.session_state.pop("username", None)
+        st.session_state.pop("user_data", None)
         st.rerun()
 
 
