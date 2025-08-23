@@ -175,13 +175,18 @@ def main_app():
             csv = df.to_csv(index=False).encode("utf-8")
             st.download_button("📥 Download Diet Plan (CSV)", csv, "diet_plan.csv", "text/csv")
 
-        # Show diet plan history
-        if st.session_state.user_data.get("diet_recommendations"):
-            st.subheader("📜 Previous Diet Plans")
-            for idx, record in enumerate(reversed(st.session_state.user_data["diet_recommendations"])):
-                st.markdown(f"**Plan {len(st.session_state.user_data['diet_recommendations']) - idx}** ({record['goal']}) - _{record['time']}_")
-                df_hist = pd.DataFrame(record["plan"])
-                st.dataframe(df_hist)
+# Show diet plan history
+if st.session_state.user_data.get("diet_recommendations"):
+    st.subheader("📜 Previous Diet Plans")
+    for idx, record in enumerate(reversed(st.session_state.user_data["diet_recommendations"])):
+        st.markdown(f"**Plan {len(st.session_state.user_data['diet_recommendations']) - idx}** ({record.get('goal', 'N/A')}) - _{record.get('time', 'Unknown')}_")
+
+        plan_data = record.get("plan", [])
+        if isinstance(plan_data, list) and len(plan_data) > 0:
+            df_hist = pd.DataFrame(plan_data)
+            st.dataframe(df_hist)
+        else:
+            st.info("⚠️ This record has no valid plan data.")
 
     # ---------------- Data Upload ----------------
     with tabs[4]:
