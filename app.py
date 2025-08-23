@@ -3,6 +3,12 @@ import pandas as pd
 import random
 from datetime import datetime
 
+# ---------------- Utility ----------------
+def save_user_data(username, data):
+    """Dummy function for saving user data (can be replaced with DB/file)."""
+    # For now, do nothing to avoid errors
+    pass
+
 
 # ---------------- Login ----------------
 def login():
@@ -22,32 +28,11 @@ def main_app():
     st.title("💉 MySugr Improved App")
     st.write(f"👋 Welcome, **{st.session_state.username}**")
 
-    tabs = st.tabs(["📊 Dashboard", "🥗 Diet Tracking"])
-
-    with tabs[0]:
-        st.header("📊 Dashboard")
-        st.write("✅ Dashboard Loaded")
-
-    with tabs[1]:
-        st.header("🥗 Diet Tracking")
-        st.write("✅ Diet Tracking Loaded")
-
-    if st.button("🚪 Logout"):
-        st.session_state.clear()
-        st.experimental_rerun()
-
-
-# ---------------- Run App ----------------
-def run_app():
-    if "username" not in st.session_state:
-        login()
-    else:
-        main_app()
-
-
-if __name__ == "__main__":
-    run_app()
-
+    # All app sections inside tabs
+    tabs = st.tabs([
+        "📊 Dashboard", "🥗 Diet Tracking", "💉 Advanced Insulin Assistant",
+        "🍎 Diet Recommendations", "📂 Data Upload", "📈 Reports"
+    ])
 
     # ---------------- Dashboard ----------------
     with tabs[0]:
@@ -129,7 +114,7 @@ if __name__ == "__main__":
         # History Viewer
         if st.session_state.user_data.get("diet_recommendations"):
             st.subheader("📜 Previous Diet Plans")
-            for idx, record in enumerate(reversed(st.session_state.user_data["diet_recommendations"])):
+            for idx, record in enumerate(reversed(st.session_state.user_data["diet_recommendations"])): 
                 st.markdown(
                     f"**Plan {len(st.session_state.user_data['diet_recommendations']) - idx}** "
                     f"({record.get('goal', 'N/A')}) - _{record.get('time', 'Unknown')}_"
@@ -190,4 +175,3 @@ def run_app():
 
 if __name__ == "__main__":
     run_app()
-
