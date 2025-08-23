@@ -175,6 +175,14 @@ def main_app():
             csv = df.to_csv(index=False).encode("utf-8")
             st.download_button("📥 Download Diet Plan (CSV)", csv, "diet_plan.csv", "text/csv")
 
+        # Show diet plan history
+        if st.session_state.user_data.get("diet_recommendations"):
+            st.subheader("📜 Previous Diet Plans")
+            for idx, record in enumerate(reversed(st.session_state.user_data["diet_recommendations"])):
+                st.markdown(f"**Plan {len(st.session_state.user_data['diet_recommendations']) - idx}** ({record['goal']}) - _{record['time']}_")
+                df_hist = pd.DataFrame(record["plan"])
+                st.dataframe(df_hist)
+
     # ---------------- Data Upload ----------------
     with tabs[4]:
         st.header("📂 Data Upload")
