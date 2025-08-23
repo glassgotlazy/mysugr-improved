@@ -1,3 +1,4 @@
+st.write("✅ main_app loaded")
 def main_app():
     st.markdown("*Made by ~Glass*", unsafe_allow_html=True)
     st.title("💉 MySugr Improved App")
