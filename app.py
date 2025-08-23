@@ -1,4 +1,8 @@
-st.write("✅ main_app loaded")
+import streamlit as st
+import pandas as pd
+import random
+from datetime import datetime
+
 def main_app():
     st.markdown("*Made by ~Glass*", unsafe_allow_html=True)
     st.title("💉 MySugr Improved App")
