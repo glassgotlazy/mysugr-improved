@@ -19,7 +19,7 @@ def login():
             if "user_data" not in st.session_state:
                 st.session_state.user_data = {}
             st.success(f"Welcome {username}!")
-            st.experimental_rerun()
+            st.rerun()   # ✅ modern replacement for st.experimental_rerun()
 
 
 # ---------------- Main App ----------------
@@ -28,7 +28,6 @@ def main_app():
     st.title("💉 MySugr Improved App")
     st.write(f"👋 Welcome, **{st.session_state.username}**")
 
-    # Tabs
     tabs = st.tabs([
         "📊 Dashboard", "🥗 Diet Tracking", "💉 Advanced Insulin Assistant",
         "🍎 Diet Recommendations", "📂 Data Upload", "📈 Reports"
@@ -160,13 +159,13 @@ def main_app():
     # ---------------- Logout ----------------
     if st.button("🚪 Logout"):
         st.session_state.clear()
-        st.experimental_rerun()
+        st.rerun()   # ✅ use st.rerun()
 
 
 # ---------------- Run App ----------------
 def run_app():
     if "username" not in st.session_state:
-        login()  # ✅ first page (sign up/login) preserved
+        login()
     else:
         main_app()
 
