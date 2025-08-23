@@ -2,6 +2,7 @@ import streamlit as st
 import json
 import os
 import pandas as pd
+import random
 from datetime import datetime
 
 # Page setup
@@ -87,18 +88,17 @@ def main_app():
         st.session_state.user_data = {}
         st.rerun()
 
-    tabs = st.tabs(["📊 Dashboard", "🥗 Diet Tracking", "💉 Insulin Recommendations", "🍎 Diet Recommendations"])
+    tabs = st.tabs(["📊 Dashboard", "🥗 Diet Tracking", "💉 Advanced Insulin Assistant", "🍎 Diet Recommendations", "📂 Data Upload", "📈 Reports"])
 
+    # ---------------- Dashboard ----------------
     with tabs[0]:
         st.header("📊 Dashboard")
         st.write("Welcome to your personalized dashboard,", st.session_state.username)
 
-        if st.session_state.get("user_data", {}).get("diet_tracking"):
-            df = pd.DataFrame(st.session_state.user_data["diet_tracking"])
-            st.dataframe(df)
-        else:
-            st.info("No meals tracked yet.")
+        st.metric("Total Meals Tracked", len(st.session_state.user_data.get("diet_tracking", [])))
+        st.metric("Total Insulin Recs", len(st.session_state.user_data.get("insulin_recommendations", [])))
 
+    # ---------------- Diet Tracking ----------------
     with tabs[1]:
         st.header("🥗 Diet Tracking")
         meal = st.text_input("Meal")
@@ -109,39 +109,99 @@ def main_app():
             save_user_data(st.session_state.username, st.session_state.user_data)
             st.success("Meal added!")
 
+        if st.session_state.user_data.get("diet_tracking"):
+            df = pd.DataFrame(st.session_state.user_data["diet_tracking"])
+            st.dataframe(df)
+
+    # ---------------- Advanced Insulin Assistant ----------------
     with tabs[2]:
-        st.header("💉 Insulin Recommendations")
+        st.header("💉 Advanced Insulin Assistant")
         glucose_level = st.number_input("Current Glucose Level (mg/dL)", 0)
-        if st.button("Get Recommendation"):
-            recommendation = f"Take {glucose_level/50:.1f} units of insulin."
+        target_glucose = st.number_input("Target Glucose Level (mg/dL)", 100)
+        carbs = st.number_input("Carbs in Meal (grams)", 0)
+        insulin_ratio = st.number_input("Insulin-to-Carb Ratio (g/unit)", 10)
+        correction_factor = st.number_input("Correction Factor (mg/dL per unit)", 50)
+
+        if st.button("Calculate Dose"):
+            meal_dose = carbs / insulin_ratio if insulin_ratio > 0 else 0
+            correction_dose = (glucose_level - target_glucose) / correction_factor if correction_factor > 0 else 0
+            total_dose = max(meal_dose + correction_dose, 0)
+
+            recommendation = f"Meal Dose: {meal_dose:.1f}, Correction Dose: {correction_dose:.1f}, Total: {total_dose:.1f} units"
+
             st.session_state.user_data.setdefault("insulin_recommendations", []).append({
                 "glucose": glucose_level,
-                "recommendation": recommendation,
+                "carbs": carbs,
+                "meal_dose": meal_dose,
+                "correction_dose": correction_dose,
+                "total_dose": total_dose,
                 "time": str(datetime.now())
             })
             save_user_data(st.session_state.username, st.session_state.user_data)
-            st.info(recommendation)
+            st.success(recommendation)
 
-        if st.session_state.get("user_data", {}).get("insulin_recommendations"):
+        if st.session_state.user_data.get("insulin_recommendations"):
             df = pd.DataFrame(st.session_state.user_data["insulin_recommendations"])
             st.dataframe(df)
 
+    # ---------------- Diet Recommendations ----------------
     with tabs[3]:
         st.header("🍎 Diet Recommendations")
+
         diet_choice = st.selectbox("Choose your diet goal", ["Weight Loss", "Weight Gain", "Maintain Weight"])
-        if st.button("Get Diet Plan"):
-            plan = f"Recommended diet plan for {diet_choice}"
+
+        if st.button("Get Diet Plan") or st.button("Regenerate Diet Plan"):
+            breakfast_options = ["Oatmeal with berries", "Greek yogurt with honey", "Vegetable omelette", "Smoothie bowl"]
+            lunch_options = ["Grilled chicken with veggies", "Quinoa salad", "Fish tacos", "Chickpea curry"]
+            dinner_options = ["Salmon with quinoa", "Stir fry with tofu", "Pasta with vegetables", "Lentil soup"]
+
+            plan = []
+            for day in range(1, 8):
+                plan.append({"Day": f"Day {day}", "Meal": "Breakfast", "Recommendation": random.choice(breakfast_options)})
+                plan.append({"Day": f"Day {day}", "Meal": "Lunch", "Recommendation": random.choice(lunch_options)})
+                plan.append({"Day": f"Day {day}", "Meal": "Dinner", "Recommendation": random.choice(dinner_options)})
+
+            df = pd.DataFrame(plan)
             st.session_state.user_data.setdefault("diet_recommendations", []).append({
                 "goal": diet_choice,
                 "plan": plan,
                 "time": str(datetime.now())
             })
             save_user_data(st.session_state.username, st.session_state.user_data)
-            st.success(plan)
 
-        if st.session_state.get("user_data", {}).get("diet_recommendations"):
-            df = pd.DataFrame(st.session_state.user_data["diet_recommendations"])
+            st.success("Diet plan generated!")
             st.dataframe(df)
+
+            csv = df.to_csv(index=False).encode("utf-8")
+            st.download_button("📥 Download Diet Plan (CSV)", csv, "diet_plan.csv", "text/csv")
+
+    # ---------------- Data Upload ----------------
+    with tabs[4]:
+        st.header("📂 Data Upload")
+        uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
+        if uploaded_file is not None:
+            df = pd.read_csv(uploaded_file)
+            st.write("Preview:")
+            st.dataframe(df.head())
+
+            if st.button("Merge Data"):
+                if "meal" in df.columns and "calories" in df.columns:
+                    st.session_state.user_data.setdefault("diet_tracking", []).extend(df.to_dict(orient="records"))
+                elif "glucose" in df.columns and "total_dose" in df.columns:
+                    st.session_state.user_data.setdefault("insulin_recommendations", []).extend(df.to_dict(orient="records"))
+                save_user_data(st.session_state.username, st.session_state.user_data)
+                st.success("Data merged into your records!")
+
+    # ---------------- Reports ----------------
+    with tabs[5]:
+        st.header("📈 Reports")
+        if st.session_state.user_data.get("insulin_recommendations"):
+            df = pd.DataFrame(st.session_state.user_data["insulin_recommendations"])
+            st.line_chart(df.set_index("time")["glucose"])
+
+        if st.session_state.user_data.get("diet_tracking"):
+            df = pd.DataFrame(st.session_state.user_data["diet_tracking"])
+            st.bar_chart(df.set_index("meal")["calories"])
 
 # ---------------------- Run App ----------------------
 def run_app():
