@@ -1,0 +1,29 @@
+name: Auto Sync from ChatGPT
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Apply ChatGPT Patch
+        run: |
+          if [ -f update_from_chatgpt.patch ]; then
+            git apply update_from_chatgpt.patch || echo "⚠️ Failed to apply patch"
+          else
+            echo "❌ No patch file found"
+          fi
+
+      - name: Commit & Push Changes
+        run: |
+          git config user.name "chatgpt-bot"
+          git config user.email "bot@example.com"
+          git add .
+          git commit -m "🤖 Auto-sync from ChatGPT" || echo "⚠️ Nothing to commit"
+          git push
