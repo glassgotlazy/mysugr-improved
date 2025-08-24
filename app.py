@@ -9,50 +9,6 @@ def save_user_data(username, data):
     """Dummy save function (replace with DB or file persistence if needed)."""
     pass
 
-
-# ---------------- USDA Integration ----------------
-USDA_API_KEY = st.secrets.get("USDA_API_KEY", "")
-
-def fetch_usda_foods(query, page_size=5):
-    """Fetch foods from USDA API."""
-    if not USDA_API_KEY:
-        return []
-    url = "https://api.nal.usda.gov/fdc/v1/foods/search"
-    params = {"api_key": USDA_API_KEY, "query": query, "pageSize": page_size}
-    try:
-        resp = requests.get(url, params=params, timeout=20)
-        if resp.status_code == 200:
-            return resp.json().get("foods", [])
-    except Exception:
-        return []
-    return []
-
-
-def generate_usda_diet_plan(goal="Balanced"):
-    """Generate a 7-day diet plan using USDA foods."""
-    categories = {
-        "Breakfast": ["oatmeal", "eggs", "yogurt"],
-        "Lunch": ["chicken", "salad", "tofu"],
-        "Dinner": ["fish", "turkey", "lentils"]
-    }
-
-    plan = []
-    for day in range(1, 8):
-        for meal, queries in categories.items():
-            foods = []
-            for q in queries:
-                foods.extend(fetch_usda_foods(q, page_size=3))
-            if foods:
-                choice = random.choice(foods)
-                plan.append({
-                    "Day": f"Day {day}",
-                    "Meal": meal,
-                    "Food": choice.get("description", "Unknown"),
-                    "Calories": choice.get("foodNutrients", [{}])[0].get("value", "N/A")
-                })
-    return plan
-
-
 # ---------------- Login Page ----------------
 def login():
     st.title("🔑 Login / Sign Up Page")
@@ -63,8 +19,7 @@ def login():
             if "user_data" not in st.session_state:
                 st.session_state.user_data = {}
             st.success(f"Welcome {username}!")
-            st.rerun()   # modern rerun
-
+            st.rerun()
 
 # ---------------- Main App ----------------
 def main_app():
@@ -87,6 +42,7 @@ def main_app():
         st.header("📊 Dashboard")
         st.metric("Total Meals Tracked", len(st.session_state.user_data.get("diet_tracking", [])))
         st.metric("Total Insulin Recs", len(st.session_state.user_data.get("insulin_recommendations", [])))
+        st.metric("Total Diet Plans", len(st.session_state.user_data.get("diet_recommendations", [])))
 
     # ---------------- Diet Tracking ----------------
     with tabs[1]:
@@ -119,7 +75,7 @@ def main_app():
             recommended_dose = (glucose - 100) / sensitivity + (carbs / 10)
             recommended_dose = max(0, round(recommended_dose, 2))
 
-            st.session_state.last_insulin_dose = recommended_dose  # ✅ persist result
+            st.session_state.last_insulin_dose = recommended_dose
 
             st.session_state.user_data.setdefault("insulin_recommendations", []).append({
                 "glucose": glucose,
@@ -132,58 +88,64 @@ def main_app():
         if "last_insulin_dose" in st.session_state:
             st.success(f"💉 Recommended Insulin Dose: **{st.session_state.last_insulin_dose} units**")
 
-    # ---------------- Diet Recommendations ----------------
+    # ---------------- Diet Recommendations (USDA API) ----------------
     with tabs[3]:
-        st.header("🍎 Diet Recommendations")
+        st.header("🍎 Diet Recommendations (via USDA API)")
 
-        # --- Custom API Upload Section ---
-        st.subheader("📤 Get Recommendations from Your API")
-        uploaded_file = st.file_uploader("Upload your diet data file (CSV/JSON)", type=["csv", "json"])
-        if uploaded_file is not None:
-            api_url = "http://localhost:8000/recommend"  # <-- replace with your API endpoint
-            files = {"file": uploaded_file.getvalue()}
+        diet_choice = st.radio("Choose your diet goal:", ["Balanced", "Low-Carb", "High-Protein"])
+        days = st.slider("Number of days", 3, 14, 7)
+
+        if st.button("Generate Diet Plan"):
             try:
-                response = requests.post(api_url, files=files, timeout=30)
+                api_url = "http://localhost:8000/recommend"  # 🔗 change to your deployed API
+                payload = {"goal": diet_choice, "days": days}
+                response = requests.post(api_url, json=payload, timeout=30)
+
                 if response.status_code == 200:
                     rec_data = response.json()
-                    st.success("✅ Received recommendations from your API!")
-                    if isinstance(rec_data, dict):
-                        st.json(rec_data)
+
+                    if "plan" in rec_data:
+                        df = pd.DataFrame(rec_data["plan"])
+
+                        st.session_state.user_data.setdefault("diet_recommendations", []).append({
+                            "goal": diet_choice,
+                            "plan": rec_data["plan"],
+                            "time": str(datetime.now())
+                        })
+                        save_user_data(st.session_state.username, st.session_state.user_data)
+
+                        st.success("✅ Diet plan generated from USDA API!")
+                        st.dataframe(df)
+
+                        csv = df.to_csv(index=False).encode("utf-8")
+                        st.download_button("📥 Download Diet Plan (CSV)", csv, "diet_plan.csv", "text/csv")
                     else:
-                        st.write(rec_data)
+                        st.error("⚠️ API response did not contain 'plan'. Check your API output.")
                 else:
-                    st.error(f"API error {response.status_code}: {response.text}")
+                    st.error(f"❌ API Error {response.status_code}: {response.text}")
+
             except Exception as e:
                 st.error(f"❌ Failed to contact API: {e}")
 
-        st.divider()
-
-        # --- USDA Diet Plan Section ---
-        st.subheader("🍎 Generate USDA-Based Plan")
-        goal = st.radio("Choose your diet goal:", ["Balanced", "Low-Carb", "High-Protein"], horizontal=True)
-
-        if st.button("Generate 7-Day Plan from USDA"):
-            plan = generate_usda_diet_plan(goal)
-            if plan:
-                df_plan = pd.DataFrame(plan)
-                st.session_state.user_data.setdefault("diet_recommendations", []).append({
-                    "goal": goal,
-                    "plan": plan,
-                    "time": datetime.now().isoformat(timespec="seconds")
-                })
-                save_user_data(st.session_state.username, st.session_state.user_data)
-                st.success("✅ USDA diet plan generated!")
-                st.dataframe(df_plan, use_container_width=True)
-
-                csv = df_plan.to_csv(index=False).encode("utf-8")
-                st.download_button("📥 Download Diet Plan (CSV)", csv, "usda_diet_plan.csv", "text/csv")
-            else:
-                st.error("⚠️ Could not generate plan from USDA API.")
+        # History Viewer
+        if st.session_state.user_data.get("diet_recommendations"):
+            st.subheader("📜 Previous Diet Plans")
+            for idx, record in enumerate(reversed(st.session_state.user_data["diet_recommendations"])):
+                st.markdown(
+                    f"**Plan {len(st.session_state.user_data['diet_recommendations']) - idx}** "
+                    f"({record.get('goal', 'N/A')}) - _{record.get('time', 'Unknown')}_"
+                )
+                plan_data = record.get("plan", [])
+                if isinstance(plan_data, list) and len(plan_data) > 0:
+                    df_hist = pd.DataFrame(plan_data)
+                    st.dataframe(df_hist)
+                else:
+                    st.info("⚠️ This record has no valid plan data.")
 
     # ---------------- Data Upload ----------------
     with tabs[4]:
         st.header("📂 Data Upload")
-        uploaded_file = st.file_uploader("Upload CSV", type=["csv"], key="general_upload")
+        uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
         if uploaded_file:
             df_upload = pd.read_csv(uploaded_file)
             st.write("✅ Uploaded Data:")
@@ -215,14 +177,12 @@ def main_app():
         st.session_state.clear()
         st.rerun()
 
-
 # ---------------- Run App ----------------
 def run_app():
     if "username" not in st.session_state:
         login()
     else:
         main_app()
-
 
 if __name__ == "__main__":
     run_app()
