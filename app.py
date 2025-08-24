@@ -136,21 +136,41 @@ def main_app():
                 else:
                     st.info("⚠ This record has no valid plan data.")
 
-    # ---------------- Data Upload ----------------
-    with tabs[4]:
-        st.header("📂 Data Upload")
-        uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
-        if uploaded_file:
-            df_upload = pd.read_csv(uploaded_file)
-            st.write("✅ Uploaded Data:")
-            st.dataframe(df_upload)
+ # ---------------- Data Upload ----------------
+with tabs[4]:
+    st.header("📂 Data Upload")
+    uploaded_file = st.file_uploader("Upload CSV", type=["csv"])
+    if uploaded_file:
+        df_upload = pd.read_csv(uploaded_file)
+        st.write("✅ Uploaded Data:")
+        st.dataframe(df_upload)
 
-            st.session_state.user_data.setdefault("uploads", []).append({
-                "filename": uploaded_file.name,
-                "data": df_upload.to_dict(),
-                "time": str(datetime.now())
-            })
-            save_user_data(st.session_state.username, st.session_state.user_data)
+        # Save raw upload
+        st.session_state.user_data.setdefault("uploads", []).append({
+            "filename": uploaded_file.name,
+            "data": df_upload.to_dict(),
+            "time": str(datetime.now())
+        })
+        save_user_data(st.session_state.username, st.session_state.user_data)
+
+        # 🔥 integrate with reports if columns match
+        if "glucose" in df_upload.columns and "carbs" in df_upload.columns:
+            for _, row in df_upload.iterrows():
+                st.session_state.user_data.setdefault("insulin_recommendations", []).append({
+                    "glucose": row["glucose"],
+                    "carbs": row.get("carbs", 0),
+                    "dose": row.get("dose", 0),
+                    "time": str(datetime.now())
+                })
+
+        if "meal" in df_upload.columns and "calories" in df_upload.columns:
+            for _, row in df_upload.iterrows():
+                st.session_state.user_data.setdefault("diet_tracking", []).append({
+                    "meal": row["meal"],
+                    "calories": row["calories"],
+                    "time": str(datetime.now())
+                })
+
 
     # ---------------- Reports ----------------
     with tabs[5]:
