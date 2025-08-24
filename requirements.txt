@@ -1,7 +1,15 @@
-streamlit
-pandas
-matplotlib
-reportlab
-plotly
-streamlit-authenticator
-openai
+# Core
+streamlit>=1.36
+pandas>=2.0
+numpy>=1.24
+
+# OpenAI API (AI features, diet assistant, chatbot, etc.)
+openai>=0.28
+
+# File handling for uploads/exports
+pyarrow>=14.0
+xlsxwriter>=3.1
+
+# Optional: plotting & visuals
+matplotlib>=3.8
+plotly>=5.20
