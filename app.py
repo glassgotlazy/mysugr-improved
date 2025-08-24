@@ -4,6 +4,8 @@ import random
 import requests
 from datetime import datetime
 
+st.write("🚀 Auto-sync test successful!")
+
 # ---------------- Utility ----------------
 def save_user_data(username, data):
     """Dummy save function (replace with DB or file persistence if needed)."""
