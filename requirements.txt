@@ -4,3 +4,4 @@ matplotlib
 reportlab
 plotly
 streamlit-authenticator
+openai
