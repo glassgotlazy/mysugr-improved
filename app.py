@@ -1,12 +1,35 @@
 import streamlit as st
 import pandas as pd
 import random
+import requests
 from datetime import datetime
 
 # ---------------- Utility ----------------
 def save_user_data(username, data):
     """Dummy save function (replace with DB or file persistence if needed)."""
     pass
+
+
+# ---------------- USDA API Utility ----------------
+def search_food_usda(query, api_key, page_size=5):
+    """Search food items using USDA FoodData Central API."""
+    url = "https://api.nal.usda.gov/fdc/v1/foods/search"
+    params = {"api_key": api_key, "query": query, "pageSize": page_size}
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        return response.json().get("foods", [])
+    return []
+
+
+def extract_macros(food):
+    """Extract calories + macros from USDA food item."""
+    nutrients = {n["nutrientName"]: n.get("value") for n in food.get("foodNutrients", [])}
+    return {
+        "calories": nutrients.get("Energy"),
+        "protein": nutrients.get("Protein"),
+        "carbs": nutrients.get("Carbohydrate, by difference"),
+        "fat": nutrients.get("Total lipid (fat)")
+    }
 
 
 # ---------------- Login Page ----------------
@@ -19,14 +42,14 @@ def login():
             if "user_data" not in st.session_state:
                 st.session_state.user_data = {}
             st.success(f"Welcome {username}!")
-            st.rerun()   # ✅ restart app flow
+            st.rerun()
 
 
 # ---------------- Main App ----------------
 def main_app():
-    st.markdown("Made by ~Glass", unsafe_allow_html=True)
+    st.markdown("*Made by ~Glass*", unsafe_allow_html=True)
     st.title("💉 MySugr Improved App")
-    st.write(f"👋 Welcome, *{st.session_state.username}*")
+    st.write(f"👋 Welcome, **{st.session_state.username}**")
 
     # Tabs
     tabs = st.tabs([
@@ -44,20 +67,53 @@ def main_app():
         st.metric("Total Meals Tracked", len(st.session_state.user_data.get("diet_tracking", [])))
         st.metric("Total Insulin Recs", len(st.session_state.user_data.get("insulin_recommendations", [])))
 
-    # ---------------- Diet Tracking ----------------
+    # ---------------- Diet Tracking (USDA + Manual) ----------------
     with tabs[1]:
         st.header("🥗 Diet Tracking")
+
+        # USDA Search
+        food_query = st.text_input("Search for food (via USDA Database)")
+        if food_query and st.button("🔍 Search Food"):
+            results = search_food_usda(food_query, st.secrets["usda"]["api_key"])
+            if results:
+                for food in results:
+                    name = food.get("description", "Unknown")
+                    macros = extract_macros(food)
+                    if macros["calories"]:
+                        if st.button(f"Add {name} ({macros['calories']} kcal)"):
+                            st.session_state.user_data.setdefault("diet_tracking", []).append({
+                                "meal": name,
+                                "calories": macros["calories"],
+                                "protein": macros["protein"],
+                                "carbs": macros["carbs"],
+                                "fat": macros["fat"],
+                                "time": str(datetime.now())
+                            })
+                            save_user_data(st.session_state.username, st.session_state.user_data)
+                            st.success(f"{name} added with {macros['calories']} kcal!")
+            else:
+                st.warning("No results found from USDA.")
+
+        # Manual entry (backup)
+        st.subheader("Manual Meal Entry")
         meal = st.text_input("Meal Name")
         calories = st.number_input("Calories", min_value=0)
-        if st.button("Add Meal"):
+        protein = st.number_input("Protein (g)", min_value=0)
+        carbs = st.number_input("Carbs (g)", min_value=0)
+        fat = st.number_input("Fat (g)", min_value=0)
+        if st.button("Add Meal Manually"):
             st.session_state.user_data.setdefault("diet_tracking", []).append({
                 "meal": meal,
                 "calories": calories,
+                "protein": protein,
+                "carbs": carbs,
+                "fat": fat,
                 "time": str(datetime.now())
             })
             save_user_data(st.session_state.username, st.session_state.user_data)
-            st.success("Meal added!")
+            st.success("Meal added manually!")
 
+        # Show tracked meals
         if st.session_state.user_data.get("diet_tracking"):
             st.subheader("Tracked Meals")
             df_meals = pd.DataFrame(st.session_state.user_data["diet_tracking"])
@@ -75,7 +131,7 @@ def main_app():
             recommended_dose = (glucose - 100) / sensitivity + (carbs / 10)
             recommended_dose = max(0, round(recommended_dose, 2))
 
-            st.session_state.last_insulin_dose = recommended_dose  # ✅ persist result
+            st.session_state.last_insulin_dose = recommended_dose
 
             st.session_state.user_data.setdefault("insulin_recommendations", []).append({
                 "glucose": glucose,
@@ -85,9 +141,8 @@ def main_app():
             })
             save_user_data(st.session_state.username, st.session_state.user_data)
 
-        # Always show last result if available
         if "last_insulin_dose" in st.session_state:
-            st.success(f"💉 Recommended Insulin Dose: *{st.session_state.last_insulin_dose} units*")
+            st.success(f"💉 Recommended Insulin Dose: **{st.session_state.last_insulin_dose} units**")
 
     # ---------------- Diet Recommendations ----------------
     with tabs[3]:
@@ -120,21 +175,19 @@ def main_app():
             csv = df.to_csv(index=False).encode("utf-8")
             st.download_button("📥 Download Diet Plan (CSV)", csv, "diet_plan.csv", "text/csv")
 
-        # History Viewer
         if st.session_state.user_data.get("diet_recommendations"):
             st.subheader("📜 Previous Diet Plans")
             for idx, record in enumerate(reversed(st.session_state.user_data["diet_recommendations"])): 
                 st.markdown(
-                    f"*Plan {len(st.session_state.user_data['diet_recommendations']) - idx}* "
-                    f"({record.get('goal', 'N/A')}) - {record.get('time', 'Unknown')}"
+                    f"**Plan {len(st.session_state.user_data['diet_recommendations']) - idx}** "
+                    f"({record.get('goal', 'N/A')}) - _{record.get('time', 'Unknown')}_"
                 )
-
                 plan_data = record.get("plan", [])
                 if isinstance(plan_data, list) and len(plan_data) > 0:
                     df_hist = pd.DataFrame(plan_data)
                     st.dataframe(df_hist)
                 else:
-                    st.info("⚠ This record has no valid plan data.")
+                    st.info("⚠️ This record has no valid plan data.")
 
     # ---------------- Data Upload ----------------
     with tabs[4]:
@@ -145,33 +198,12 @@ def main_app():
             st.write("✅ Uploaded Data:")
             st.dataframe(df_upload)
 
-            # Save raw upload
             st.session_state.user_data.setdefault("uploads", []).append({
                 "filename": uploaded_file.name,
                 "data": df_upload.to_dict(),
                 "time": str(datetime.now())
             })
             save_user_data(st.session_state.username, st.session_state.user_data)
-
-            # 🔥 integrate with reports if columns match
-            if "glucose" in df_upload.columns and "carbs" in df_upload.columns:
-                for _, row in df_upload.iterrows():
-                    st.session_state.user_data.setdefault("insulin_recommendations", []).append({
-                        "glucose": row["glucose"],
-                        "carbs": row.get("carbs", 0),
-                        "dose": row.get("dose", 0),
-                        "time": str(datetime.now())
-                    })
-
-            if "meal" in df_upload.columns and "calories" in df_upload.columns:
-                for _, row in df_upload.iterrows():
-                    st.session_state.user_data.setdefault("diet_tracking", []).append({
-                        "meal": row["meal"],
-                        "calories": row["calories"],
-                        "time": str(datetime.now())
-                    })
-
-
 
     # ---------------- Reports ----------------
     with tabs[5]:
@@ -187,6 +219,9 @@ def main_app():
             st.subheader("Calorie Intake")
             st.bar_chart(df_calories["calories"])
 
+            st.subheader("Macro Breakdown")
+            st.bar_chart(df_calories[["protein", "carbs", "fat"]])
+
     # ---------------- Logout ----------------
     if st.button("🚪 Logout"):
         st.session_state.clear()
@@ -201,5 +236,5 @@ def run_app():
         main_app()
 
 
-if __name__ == "__main__":   # ✅ fixed
+if __name__ == "__main__":
     run_app()
