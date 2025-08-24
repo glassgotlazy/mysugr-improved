@@ -1,12 +1,13 @@
 diff --git a/app.py b/app.py
-index 1111111..2222222 100644
+index e69de29..f5a6b0b 100644
 --- a/app.py
 +++ b/app.py
-@@ -5,6 +5,8 @@
+@@ -1,6 +1,8 @@
+ import streamlit as st
+ import pandas as pd
+ import random
+ import requests
  from datetime import datetime
- 
-+st.write("✅ Auto-sync test: ChatGPT successfully updated this file!")
-+
- # ---------------- Utility ----------------
- def save_user_data(username, data):
-     """Dummy save function (replace with DB or file persistence if needed)."""
+
++# ✅ This line is added to confirm auto-sync is working
++st.write("🚀 Auto-sync test successful!")
