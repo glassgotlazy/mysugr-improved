@@ -2,6 +2,12 @@ import streamlit as st
 import pandas as pd
 import random
 from datetime import datetime
+from openai import OpenAI
+
+# ---------------- Setup ----------------
+st.set_page_config(page_title="MySugr Improved AI", layout="wide")
+client = OpenAI(api_key=st.secrets["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"])  # store your key in .streamlit/secrets.toml
+
 
 # ---------------- Utility ----------------
 def init_user_storage():
@@ -21,6 +27,21 @@ def save_user_data(username):
     st.session_state.all_users[username] = st.session_state.user_data
 
 
+def ai_chat(prompt, system_role="You are a helpful medical AI assistant specializing in diabetes management."):
+    """Send query to OpenAI and return response text."""
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_role},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"⚠️ Error: {e}"
+
+
 # ---------------- Login Page ----------------
 def login():
     st.title("🔑 Login / Sign Up Page")
@@ -36,8 +57,8 @@ def login():
 
 # ---------------- Main App ----------------
 def main_app():
-    st.markdown("*Made by ~Glass*", unsafe_allow_html=True)
-    st.title("💉 MySugr Improved App")
+    st.markdown("*Made by ~Glass + AI*", unsafe_allow_html=True)
+    st.title("💉 MySugr Improved AI App")
     st.write(f"👋 Welcome, **{st.session_state.username}**")
 
     # Tabs
@@ -47,7 +68,8 @@ def main_app():
         "💉 Advanced Insulin Assistant",
         "🍎 Diet Recommendations", 
         "📂 Data Upload", 
-        "📈 Reports"
+        "📈 Reports",
+        "🤖 AI Assistant"
     ])
 
     # ---------------- Dashboard ----------------
@@ -55,6 +77,7 @@ def main_app():
         st.header("📊 Dashboard")
         st.metric("Total Meals Tracked", len(st.session_state.user_data.get("diet_tracking", [])))
         st.metric("Total Insulin Recs", len(st.session_state.user_data.get("insulin_recommendations", [])))
+        st.metric("Diet Plans Generated", len(st.session_state.user_data.get("diet_recommendations", [])))
 
     # ---------------- Diet Tracking ----------------
     with tabs[1]:
@@ -102,36 +125,36 @@ def main_app():
         if "last_insulin_dose" in st.session_state:
             st.success(f"💉 Recommended Insulin Dose: **{st.session_state.last_insulin_dose} units**")
 
+            if st.button("🤖 Explain this dose with AI"):
+                explanation = ai_chat(
+                    f"My glucose level is {glucose}, I ate {carbs}g carbs, "
+                    f"sensitivity factor {sensitivity}, recommended dose {st.session_state.last_insulin_dose}. "
+                    f"Explain in simple terms why this insulin dose is suggested."
+                )
+                st.info(explanation)
+
     # ---------------- Diet Recommendations ----------------
     with tabs[3]:
         st.header("🍎 Diet Recommendations")
 
-        breakfast_options = ["Oatmeal with berries", "Scrambled eggs & spinach", "Greek yogurt with nuts"]
-        lunch_options = ["Grilled chicken & quinoa", "Salmon salad", "Vegetable stir fry with tofu"]
-        dinner_options = ["Grilled fish & sweet potato", "Turkey with veggies", "Lentil curry with rice"]
-
         diet_choice = st.radio("Choose your diet goal:", ["Balanced", "Low-Carb", "High-Protein"])
 
-        if st.button("Generate Diet Plan"):
-            plan = []
-            for day in range(1, 8):
-                plan.append({"Day": f"Day {day}", "Meal": "Breakfast", "Recommendation": random.choice(breakfast_options)})
-                plan.append({"Day": f"Day {day}", "Meal": "Lunch", "Recommendation": random.choice(lunch_options)})
-                plan.append({"Day": f"Day {day}", "Meal": "Dinner", "Recommendation": random.choice(dinner_options)})
+        if st.button("Generate AI Diet Plan"):
+            # Generate with OpenAI
+            ai_plan_text = ai_chat(
+                f"Generate a 7-day {diet_choice} diet plan for a diabetic patient. "
+                f"Include breakfast, lunch, and dinner with calories."
+            )
 
-            df = pd.DataFrame(plan)
+            st.text(ai_plan_text)
+
             st.session_state.user_data.setdefault("diet_recommendations", []).append({
                 "goal": diet_choice,
-                "plan": plan,
+                "plan": ai_plan_text,
                 "time": str(datetime.now())
             })
             save_user_data(st.session_state.username)
-
-            st.success("✅ Diet plan generated!")
-            st.dataframe(df)
-
-            csv = df.to_csv(index=False).encode("utf-8")
-            st.download_button("📥 Download Diet Plan (CSV)", csv, "diet_plan.csv", "text/csv")
+            st.success("✅ AI Diet Plan generated!")
 
         # History Viewer
         if st.session_state.user_data.get("diet_recommendations"):
@@ -141,13 +164,7 @@ def main_app():
                     f"**Plan {len(st.session_state.user_data['diet_recommendations']) - idx}** "
                     f"({record.get('goal', 'N/A')}) - _{record.get('time', 'Unknown')}_"
                 )
-
-                plan_data = record.get("plan", [])
-                if isinstance(plan_data, list) and len(plan_data) > 0:
-                    df_hist = pd.DataFrame(plan_data)
-                    st.dataframe(df_hist)
-                else:
-                    st.info("⚠️ This record has no valid plan data.")
+                st.text(record.get("plan", "⚠️ No plan data."))
 
     # ---------------- Data Upload ----------------
     with tabs[4]:
@@ -178,6 +195,23 @@ def main_app():
             df_calories = pd.DataFrame(st.session_state.user_data["diet_tracking"])
             st.subheader("Calorie Intake")
             st.bar_chart(df_calories["calories"])
+
+        if st.button("🤖 Summarize Report with AI"):
+            report_text = ai_chat(
+                f"Here is a summary of user data:\n"
+                f"Insulin history: {st.session_state.user_data.get('insulin_recommendations', [])}\n"
+                f"Diet tracking: {st.session_state.user_data.get('diet_tracking', [])}\n"
+                f"Please provide insights and suggestions for this user."
+            )
+            st.info(report_text)
+
+    # ---------------- AI Assistant ----------------
+    with tabs[6]:
+        st.header("🤖 AI Assistant - Ask Anything")
+        query = st.text_area("Ask your health / diabetes / diet question")
+        if st.button("Ask AI"):
+            answer = ai_chat(query)
+            st.success(answer)
 
     # ---------------- Logout ----------------
     if st.button("🚪 Logout"):
