@@ -2,11 +2,13 @@ import streamlit as st
 import pandas as pd
 import random
 from datetime import datetime
-from openai import OpenAI
+import openai
 
 # ---------------- Setup ----------------
 st.set_page_config(page_title="MySugr Improved AI", layout="wide")
-client = OpenAI(api_key=st.secrets["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"])  # store your key in .streamlit/secrets.toml
+
+# Load API key (store it in .streamlit/secrets.toml)
+openai.api_key = st.secrets["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"]
 
 
 # ---------------- Utility ----------------
@@ -30,14 +32,14 @@ def save_user_data(username):
 def ai_chat(prompt, system_role="You are a helpful medical AI assistant specializing in diabetes management."):
     """Send query to OpenAI and return response text."""
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # or "gpt-3.5-turbo" if gpt-4 not enabled
             messages=[
                 {"role": "system", "content": system_role},
                 {"role": "user", "content": prompt}
             ]
         )
-        return response.choices[0].message.content.strip()
+        return response["choices"][0]["message"]["content"].strip()
     except Exception as e:
         return f"⚠️ Error: {e}"
 
@@ -140,10 +142,9 @@ def main_app():
         diet_choice = st.radio("Choose your diet goal:", ["Balanced", "Low-Carb", "High-Protein"])
 
         if st.button("Generate AI Diet Plan"):
-            # Generate with OpenAI
             ai_plan_text = ai_chat(
                 f"Generate a 7-day {diet_choice} diet plan for a diabetic patient. "
-                f"Include breakfast, lunch, and dinner with calories."
+                f"Include breakfast, lunch, and dinner with approximate calories."
             )
 
             st.text(ai_plan_text)
