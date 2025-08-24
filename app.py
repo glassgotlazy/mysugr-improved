@@ -19,7 +19,7 @@ def login():
             if "user_data" not in st.session_state:
                 st.session_state.user_data = {}
             st.success(f"Welcome {username}!")
-            st.rerun()   # modern rerun
+            st.rerun()   # ✅ restart app flow
 
 
 # ---------------- Main App ----------------
@@ -180,5 +180,5 @@ def run_app():
         main_app()
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":   # ✅ fixed
     run_app()
